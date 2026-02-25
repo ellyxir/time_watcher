@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+SELF=$(readlink "$0" || true)
+if [ -z "$SELF" ]; then SELF="$0"; fi
+RELEASE_ROOT="$(cd "$(dirname "$SELF")/.." && pwd -P)"
+
+# Encode args as newline-delimited env var for Elixir to parse
+export TW_ARGV=""
+for arg in "$@"; do
+  if [ -z "$TW_ARGV" ]; then
+    TW_ARGV="$arg"
+  else
+    TW_ARGV="$TW_ARGV
+$arg"
+  fi
+done
+
+exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
