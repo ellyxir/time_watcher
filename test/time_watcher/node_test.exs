@@ -4,8 +4,20 @@ defmodule TimeWatcher.NodeTest do
   alias TimeWatcher.Node
 
   describe "daemon_node_name/0" do
-    test "returns deterministic daemon node name" do
+    test "returns configured daemon node name" do
+      # In test env, configured to :tw_watcher_test@localhost
+      assert Node.daemon_node_name() == :tw_watcher_test@localhost
+    end
+
+    test "defaults to :tw_watcher@localhost when not configured" do
+      # Temporarily clear the config
+      original = Application.get_env(:time_watcher, :daemon_node_name)
+      Application.delete_env(:time_watcher, :daemon_node_name)
+
       assert Node.daemon_node_name() == :tw_watcher@localhost
+
+      # Restore
+      if original, do: Application.put_env(:time_watcher, :daemon_node_name, original)
     end
   end
 

@@ -5,10 +5,11 @@ defmodule TimeWatcher.Node do
 
   @doc """
   Returns the deterministic daemon node name.
+  Configurable via `:time_watcher, :daemon_node_name` for testing.
   """
   @spec daemon_node_name() :: atom()
   def daemon_node_name do
-    :tw_watcher@localhost
+    Application.get_env(:time_watcher, :daemon_node_name, :tw_watcher@localhost)
   end
 
   @doc """

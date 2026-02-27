@@ -80,7 +80,8 @@ defmodule TimeWatcher.NodeIntegrationTest do
       name2 = Node.daemon_node_name()
 
       assert name1 == name2
-      assert name1 == :tw_watcher@localhost
+      # In test env, configured to use test-specific name
+      assert name1 == :tw_watcher_test@localhost
     end
 
     test "client_node_name returns unique names" do
