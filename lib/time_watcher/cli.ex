@@ -56,6 +56,9 @@ defmodule TimeWatcher.CLI do
         arg, {date, [{:pending_cooldown, true} | rest]} ->
           {date, [{:cooldown, String.to_integer(arg)} | rest]}
 
+        "--md", {date, opts} ->
+          {date, [{:md, true} | opts]}
+
         arg, {nil, opts} ->
           {arg, opts}
 
@@ -81,17 +84,24 @@ defmodule TimeWatcher.CLI do
     events = Storage.load_events(date)
     report_opts = build_report_opts(opts)
     stretches = Report.stretches(events, report_opts)
+    markdown? = Keyword.get(opts, :md, false)
 
     if stretches == [] do
       IO.puts("No activity recorded for #{date}")
     else
-      IO.puts("Activity for #{date}:\n")
-      IO.puts(Report.format(stretches))
-
       total_seconds = Enum.reduce(stretches, 0, fn s, acc -> acc + (s.stop - s.start) end)
       hours = div(total_seconds, 3600)
       minutes = div(rem(total_seconds, 3600), 60)
-      IO.puts("\nTotal: #{hours}h #{minutes}m")
+
+      if markdown? do
+        IO.puts("## Activity for #{date}\n")
+        IO.puts(Report.format_markdown(stretches))
+        IO.puts("\n**Total: #{hours}h #{minutes}m**")
+      else
+        IO.puts("Activity for #{date}:\n")
+        IO.puts(Report.format(stretches))
+        IO.puts("\nTotal: #{hours}h #{minutes}m")
+      end
     end
   end
 
@@ -163,11 +173,12 @@ defmodule TimeWatcher.CLI do
       tw stop                                 Stop the daemon
       tw list                                 List watched directories
       tw remove <dir1 dir2 ...>               Remove directories from daemon
-      tw report [YYYY-MM-DD] [--cooldown N]   Show activity report (default: today)
+      tw report [YYYY-MM-DD] [options]        Show activity report (default: today)
 
     Options:
       -v, --verbose      Print events as they are recorded
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
+      --md               Output report in markdown format
     """)
   end
 
@@ -194,7 +205,9 @@ defmodule TimeWatcher.CLI do
           IO.puts("Already watching: #{dir}")
 
         {:error, :would_cause_loop} ->
-          IO.puts("Cannot watch #{dir}: would cause infinite loop (contains or is inside data directory)")
+          IO.puts(
+            "Cannot watch #{dir}: would cause infinite loop (contains or is inside data directory)"
+          )
 
         {:error, reason} ->
           IO.puts("Error adding #{dir}: #{inspect(reason)}")

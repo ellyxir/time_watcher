@@ -90,4 +90,44 @@ defmodule TimeWatcher.ReportTest do
       assert output =~ "0h 15m"
     end
   end
+
+  describe "format_markdown/1" do
+    test "outputs markdown table with headers" do
+      stretches = [
+        %{
+          repo: "my_project",
+          start: 1_740_000_000,
+          stop: 1_740_003_600
+        }
+      ]
+
+      output = Report.format_markdown(stretches)
+      assert output =~ "| Time | Project | Duration |"
+      assert output =~ "|------|---------|----------|"
+      assert output =~ "my_project"
+      assert output =~ "1h 0m"
+    end
+
+    test "formats multiple stretches as table rows" do
+      stretches = [
+        %{repo: "proj_a", start: 1_740_000_000, stop: 1_740_001_800},
+        %{repo: "proj_b", start: 1_740_002_000, stop: 1_740_003_800}
+      ]
+
+      output = Report.format_markdown(stretches)
+      lines = String.split(output, "\n")
+      # Header + separator + 2 data rows
+      assert length(lines) == 4
+      assert Enum.any?(lines, &(&1 =~ "proj_a"))
+      assert Enum.any?(lines, &(&1 =~ "proj_b"))
+    end
+
+    test "formats empty stretches as empty table" do
+      output = Report.format_markdown([])
+      assert output =~ "| Time | Project | Duration |"
+      lines = String.split(output, "\n")
+      # Just header and separator
+      assert length(lines) == 2
+    end
+  end
 end

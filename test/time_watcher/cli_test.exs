@@ -27,6 +27,26 @@ defmodule TimeWatcher.CLITest do
                {:report, "2026-02-25", [cooldown: 10]}
     end
 
+    test "parses 'report' with --md flag" do
+      assert CLI.parse_args(["report", "--md"]) ==
+               {:report, Date.to_string(Date.utc_today()), [md: true]}
+    end
+
+    test "parses 'report' with date and --md flag" do
+      assert CLI.parse_args(["report", "2026-02-25", "--md"]) ==
+               {:report, "2026-02-25", [md: true]}
+    end
+
+    test "parses 'report' with --md and --cooldown flags" do
+      assert CLI.parse_args(["report", "2026-02-25", "--md", "--cooldown", "15"]) ==
+               {:report, "2026-02-25", [cooldown: 15, md: true]}
+    end
+
+    test "parses 'report' with --md before date" do
+      assert CLI.parse_args(["report", "--md", "2026-02-25"]) ==
+               {:report, "2026-02-25", [md: true]}
+    end
+
     test "parses 'watch' with directories" do
       assert CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"]) ==
                {:watch, ["/tmp/dir1", "/tmp/dir2"], []}

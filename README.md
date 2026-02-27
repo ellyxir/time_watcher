@@ -78,6 +78,9 @@ tw report
 
 # Specific date
 tw report 2026-02-25
+
+# Markdown format (for pasting into notes, PRs, etc.)
+tw report --md
 ```
 
 Example output:
@@ -90,6 +93,20 @@ Activity for 2026-02-25:
   14:30 - 15:10  docs_site (0h 40m)
 
 Total: 3h 33m
+```
+
+With `--md`:
+
+```markdown
+## Activity for 2026-02-25
+
+| Time | Project | Duration |
+|------|---------|----------|
+| 09:12 - 10:45 | my_app | 1h 33m |
+| 13:00 - 14:20 | my_app | 1h 20m |
+| 14:30 - 15:10 | docs_site | 0h 40m |
+
+**Total: 3h 33m**
 ```
 
 ## Data storage

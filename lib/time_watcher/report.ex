@@ -27,17 +27,42 @@ defmodule TimeWatcher.Report do
     |> Enum.sort_by(& &1.start)
   end
 
+  @doc """
+  Formats stretches as human-readable text lines.
+  """
   @spec format([stretch()]) :: String.t()
   def format(stretches) do
     Enum.map_join(stretches, "\n", fn s ->
-      start_time = DateTime.from_unix!(s.start) |> Calendar.strftime("%H:%M")
-      stop_time = DateTime.from_unix!(s.stop) |> Calendar.strftime("%H:%M")
-      duration_seconds = s.stop - s.start
-      hours = div(duration_seconds, 3600)
-      minutes = div(rem(duration_seconds, 3600), 60)
-
-      "  #{start_time} - #{stop_time}  #{s.repo}  (#{hours}h #{minutes}m)"
+      {start_time, stop_time, duration} = format_stretch_parts(s)
+      "  #{start_time} - #{stop_time}  #{s.repo}  (#{duration})"
     end)
+  end
+
+  @doc """
+  Formats stretches as a markdown table.
+  """
+  @spec format_markdown([stretch()]) :: String.t()
+  def format_markdown(stretches) do
+    header = "| Time | Project | Duration |"
+    separator = "|------|---------|----------|"
+
+    rows =
+      Enum.map(stretches, fn s ->
+        {start_time, stop_time, duration} = format_stretch_parts(s)
+        "| #{start_time} - #{stop_time} | #{s.repo} | #{duration} |"
+      end)
+
+    Enum.join([header, separator | rows], "\n")
+  end
+
+  @spec format_stretch_parts(stretch()) :: {String.t(), String.t(), String.t()}
+  defp format_stretch_parts(s) do
+    start_time = DateTime.from_unix!(s.start) |> Calendar.strftime("%H:%M")
+    stop_time = DateTime.from_unix!(s.stop) |> Calendar.strftime("%H:%M")
+    duration_seconds = s.stop - s.start
+    hours = div(duration_seconds, 3600)
+    minutes = div(rem(duration_seconds, 3600), 60)
+    {start_time, stop_time, "#{hours}h #{minutes}m"}
   end
 
   defp merge_windows([]), do: []
