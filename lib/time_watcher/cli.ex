@@ -6,12 +6,13 @@ defmodule TimeWatcher.CLI do
   alias TimeWatcher.{Client, Daemon, Report, Storage}
 
   @typep command ::
-           {:report, String.t(), keyword()}
+           {:report, String.t() | :multi_day, keyword()}
            | {:watch, [String.t()], [atom()]}
            | :stop
            | :list
            | {:remove, [String.t()]}
            | :help
+           | {:error, String.t()}
 
   @spec main([String.t()]) :: :ok
   def main(args) do
@@ -20,8 +21,10 @@ defmodule TimeWatcher.CLI do
 
   @spec parse_args([String.t()]) :: command()
   def parse_args(["report" | rest]) do
-    {date, opts} = parse_report_args(rest)
-    {:report, date, opts}
+    case parse_report_args(rest) do
+      {:error, _} = error -> error
+      {date, opts} -> {:report, date, opts}
+    end
   end
 
   def parse_args(["watch" | rest]) do
@@ -46,7 +49,8 @@ defmodule TimeWatcher.CLI do
     :help
   end
 
-  @spec parse_report_args([String.t()]) :: {String.t(), keyword()}
+  @spec parse_report_args([String.t()]) ::
+          {String.t() | :multi_day, keyword()} | {:error, String.t()}
   defp parse_report_args(args) do
     {date, opts} =
       Enum.reduce(args, {nil, []}, fn
@@ -55,6 +59,12 @@ defmodule TimeWatcher.CLI do
 
         arg, {date, [{:pending_cooldown, true} | rest]} ->
           {date, [{:cooldown, String.to_integer(arg)} | rest]}
+
+        "--days", {date, opts} ->
+          {date, [{:pending_days, true} | opts]}
+
+        arg, {date, [{:pending_days, true} | rest]} ->
+          {date, [{:days, String.to_integer(arg)} | rest]}
 
         "--md", {date, opts} ->
           {date, [{:md, true} | opts]}
@@ -66,9 +76,22 @@ defmodule TimeWatcher.CLI do
           acc
       end)
 
-    date = date || Date.to_string(Date.utc_today())
-    opts = Keyword.delete(opts, :pending_cooldown)
-    {date, opts}
+    opts = opts |> Keyword.delete(:pending_cooldown) |> Keyword.delete(:pending_days)
+
+    cond do
+      Keyword.has_key?(opts, :days) and date != nil ->
+        {:error, "--days cannot be combined with a date argument"}
+
+      Keyword.has_key?(opts, :days) and Keyword.get(opts, :days) <= 0 ->
+        {:error, "--days must be a positive integer"}
+
+      Keyword.has_key?(opts, :days) ->
+        {:multi_day, opts}
+
+      true ->
+        date = date || Date.to_string(Date.utc_today())
+        {date, opts}
+    end
   end
 
   @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
@@ -78,6 +101,16 @@ defmodule TimeWatcher.CLI do
       "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
       dir, {dirs, opts} -> {dirs ++ [dir], opts}
     end)
+  end
+
+  defp run({:error, message}) do
+    IO.puts("Error: #{message}")
+  end
+
+  defp run({:report, :multi_day, opts}) do
+    days = Keyword.fetch!(opts, :days)
+    dates = generate_date_list(days)
+    run_multi_day_report(dates, opts)
   end
 
   defp run({:report, date, opts}) do
@@ -179,7 +212,82 @@ defmodule TimeWatcher.CLI do
       -v, --verbose      Print events as they are recorded
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --md               Output report in markdown format
+      --days N           Show last N days of activity (including today)
     """)
+  end
+
+  @spec generate_date_list(pos_integer()) :: [String.t()]
+  defp generate_date_list(days) do
+    today = Date.utc_today()
+
+    (days - 1)..0//-1
+    |> Enum.map(fn offset -> today |> Date.add(-offset) |> Date.to_string() end)
+  end
+
+  @spec run_multi_day_report([String.t()], keyword()) :: :ok
+  defp run_multi_day_report(dates, opts) do
+    report_opts = build_report_opts(opts)
+    markdown? = Keyword.get(opts, :md, false)
+
+    day_results =
+      dates
+      |> Enum.map(fn date ->
+        events = Storage.load_events(date)
+        stretches = Report.stretches(events, report_opts)
+        {date, stretches}
+      end)
+      |> Enum.reject(fn {_date, stretches} -> stretches == [] end)
+
+    if day_results == [] do
+      IO.puts("No activity recorded for the selected period")
+    else
+      grand_total =
+        day_results
+        |> Enum.map(fn {_date, stretches} -> sum_stretches(stretches) end)
+        |> Enum.sum()
+
+      Enum.each(day_results, fn {date, stretches} ->
+        print_day_report(date, stretches, markdown?)
+      end)
+
+      print_grand_total(length(day_results), grand_total, markdown?)
+    end
+  end
+
+  @spec print_grand_total(pos_integer(), non_neg_integer(), boolean()) :: :ok
+  defp print_grand_total(num_days, total_seconds, markdown?) do
+    total_hours = div(total_seconds, 3600)
+    total_minutes = div(rem(total_seconds, 3600), 60)
+
+    IO.puts("---")
+
+    if markdown? do
+      IO.puts("**Total (#{num_days} days): #{total_hours}h #{total_minutes}m**")
+    else
+      IO.puts("Total (#{num_days} days): #{total_hours}h #{total_minutes}m")
+    end
+  end
+
+  @spec sum_stretches([Report.stretch()]) :: non_neg_integer()
+  defp sum_stretches(stretches) do
+    Enum.reduce(stretches, 0, fn s, acc -> acc + (s.stop - s.start) end)
+  end
+
+  @spec print_day_report(String.t(), [Report.stretch()], boolean()) :: :ok
+  defp print_day_report(date, stretches, markdown?) do
+    day_total = sum_stretches(stretches)
+    day_hours = div(day_total, 3600)
+    day_minutes = div(rem(day_total, 3600), 60)
+
+    if markdown? do
+      IO.puts("## Activity for #{date}\n")
+      IO.puts(Report.format_markdown(stretches))
+      IO.puts("\n**Day total: #{day_hours}h #{day_minutes}m**\n")
+    else
+      IO.puts("Activity for #{date}:\n")
+      IO.puts(Report.format(stretches))
+      IO.puts("\nDay total: #{day_hours}h #{day_minutes}m\n")
+    end
   end
 
   @spec build_report_opts(keyword()) :: keyword()

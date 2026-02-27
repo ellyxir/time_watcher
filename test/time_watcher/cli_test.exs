@@ -47,6 +47,41 @@ defmodule TimeWatcher.CLITest do
                {:report, "2026-02-25", [md: true]}
     end
 
+    test "parses 'report' with --days flag" do
+      assert CLI.parse_args(["report", "--days", "7"]) ==
+               {:report, :multi_day, [days: 7]}
+    end
+
+    test "parses 'report' with --days and --md flags" do
+      assert CLI.parse_args(["report", "--days", "7", "--md"]) ==
+               {:report, :multi_day, [md: true, days: 7]}
+    end
+
+    test "parses 'report' with --days and --cooldown flags" do
+      assert CLI.parse_args(["report", "--days", "7", "--cooldown", "10"]) ==
+               {:report, :multi_day, [cooldown: 10, days: 7]}
+    end
+
+    test "parses 'report' with --days, --md, and --cooldown flags" do
+      assert CLI.parse_args(["report", "--days", "5", "--md", "--cooldown", "15"]) ==
+               {:report, :multi_day, [cooldown: 15, md: true, days: 5]}
+    end
+
+    test "report --days with date argument returns error" do
+      assert CLI.parse_args(["report", "--days", "7", "2026-02-25"]) ==
+               {:error, "--days cannot be combined with a date argument"}
+    end
+
+    test "report --days 0 returns error" do
+      assert CLI.parse_args(["report", "--days", "0"]) ==
+               {:error, "--days must be a positive integer"}
+    end
+
+    test "report --days negative returns error" do
+      assert CLI.parse_args(["report", "--days", "-1"]) ==
+               {:error, "--days must be a positive integer"}
+    end
+
     test "parses 'watch' with directories" do
       assert CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"]) ==
                {:watch, ["/tmp/dir1", "/tmp/dir2"], []}

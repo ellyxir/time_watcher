@@ -169,6 +169,158 @@ defmodule TimeWatcher.CLIIntegrationTest do
     end
   end
 
+  describe "report --days command" do
+    test "outputs multiple days of activity", %{data_dir: data_dir} do
+      # Day 1: 2026-01-15 10:00 UTC
+      day1_time = 1_736_935_200
+      # Day 2: 2026-01-16 10:00 UTC (24 hours later)
+      day2_time = day1_time + 86_400
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event2 = %Event{
+        timestamp: day2_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day2_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2], [], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      assert output =~ "Activity for #{date2}"
+      assert output =~ "Day total:"
+      assert output =~ "Total (2 days):"
+    end
+
+    test "outputs markdown format with --days and --md", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+      day2_time = day1_time + 86_400
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event2 = %Event{
+        timestamp: day2_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day2_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2], [md: true], data_dir)
+        end)
+
+      assert output =~ "## Activity for #{date1}"
+      assert output =~ "## Activity for #{date2}"
+      assert output =~ "| Time | Project | Duration |"
+      assert output =~ "**Day total:"
+      assert output =~ "**Total (2 days):"
+    end
+
+    test "skips days with no activity", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+      # Skip day 2, add event on day 3
+      day3_time = day1_time + 86_400 * 2
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event3 = %Event{
+        timestamp: day3_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event3, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day1_time + 86_400)
+      date3 = timestamp_to_date(day3_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2, date3], [], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      refute output =~ "Activity for #{date2}"
+      assert output =~ "Activity for #{date3}"
+      assert output =~ "Total (2 days):"
+    end
+
+    test "shows no activity when all days are empty", %{data_dir: data_dir} do
+      output =
+        capture_io(fn ->
+          run_multi_day_report(["2026-01-15", "2026-01-16"], [], data_dir)
+        end)
+
+      assert output =~ "No activity recorded for the selected period"
+    end
+
+    test "respects --cooldown option with --days", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event2 = %Event{
+        timestamp: day1_time + 480,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1], [cooldown: 10], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      assert output =~ "my_app"
+    end
+  end
+
   describe "help command" do
     test "outputs usage information" do
       output =
@@ -240,5 +392,68 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
   defp timestamp_to_date(timestamp) do
     timestamp |> DateTime.from_unix!() |> DateTime.to_date() |> Date.to_string()
+  end
+
+  # Helper to run multi-day report with custom data_dir
+  defp run_multi_day_report(dates, opts, data_dir) do
+    report_opts = build_report_opts(opts)
+    markdown? = Keyword.get(opts, :md, false)
+
+    day_results =
+      dates
+      |> Enum.map(fn date ->
+        events = Storage.load_events(date, data_dir)
+        stretches = TimeWatcher.Report.stretches(events, report_opts)
+        {date, stretches}
+      end)
+      |> Enum.reject(fn {_date, stretches} -> stretches == [] end)
+
+    if day_results == [] do
+      IO.puts("No activity recorded for the selected period")
+    else
+      grand_total =
+        day_results
+        |> Enum.map(fn {_date, stretches} -> sum_stretches(stretches) end)
+        |> Enum.sum()
+
+      Enum.each(day_results, fn {date, stretches} ->
+        print_day_report(date, stretches, markdown?)
+      end)
+
+      print_grand_total(length(day_results), grand_total, markdown?)
+    end
+  end
+
+  defp print_day_report(date, stretches, markdown?) do
+    day_total = sum_stretches(stretches)
+    day_hours = div(day_total, 3600)
+    day_minutes = div(rem(day_total, 3600), 60)
+
+    if markdown? do
+      IO.puts("## Activity for #{date}\n")
+      IO.puts(TimeWatcher.Report.format_markdown(stretches))
+      IO.puts("\n**Day total: #{day_hours}h #{day_minutes}m**\n")
+    else
+      IO.puts("Activity for #{date}:\n")
+      IO.puts(TimeWatcher.Report.format(stretches))
+      IO.puts("\nDay total: #{day_hours}h #{day_minutes}m\n")
+    end
+  end
+
+  defp print_grand_total(num_days, total_seconds, markdown?) do
+    total_hours = div(total_seconds, 3600)
+    total_minutes = div(rem(total_seconds, 3600), 60)
+
+    IO.puts("---")
+
+    if markdown? do
+      IO.puts("**Total (#{num_days} days): #{total_hours}h #{total_minutes}m**")
+    else
+      IO.puts("Total (#{num_days} days): #{total_hours}h #{total_minutes}m")
+    end
+  end
+
+  defp sum_stretches(stretches) do
+    Enum.reduce(stretches, 0, fn s, acc -> acc + (s.stop - s.start) end)
   end
 end
