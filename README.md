@@ -17,8 +17,7 @@ Reports show stretches of activity by expanding each event into a 10-minute wind
 ### Nix
 
 ```sh
-git clone <repo-url> && cd time_watcher
-nix profile install .
+nix profile install git+https://codeberg.org/ellyxir/time_watcher
 ```
 
 ### From source
@@ -26,7 +25,7 @@ nix profile install .
 Requires Elixir 1.18+.
 
 ```sh
-git clone <repo-url> && cd time_watcher
+git clone https://codeberg.org/ellyxir/time_watcher.git && cd time_watcher
 mix deps.get
 MIX_ENV=prod mix release time_watcher
 ```
