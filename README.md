@@ -175,7 +175,14 @@ Events for my_app on 2026-02-25:
 Decoded 3/3 file paths
 ```
 
-This works by hashing all files in the repo directory and matching against the stored hashes. Files that have been deleted or renamed since the event won't be decoded.
+This works by hashing all files in the repo directory and matching against the stored hashes. Files that have been deleted or renamed since the event won't be decoded. Note: decoding can be slow on large repositories since every file must be hashed.
+
+### Version
+
+```sh
+tw --version
+tw -V
+```
 
 ## Data storage
 
