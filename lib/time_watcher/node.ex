@@ -25,7 +25,8 @@ defmodule TimeWatcher.Node do
   """
   @spec cookie_path() :: String.t()
   def cookie_path do
-    data_dir = System.get_env("XDG_DATA_HOME", Path.join(System.user_home!(), ".local/share"))
+    home = System.user_home() || "/tmp"
+    data_dir = System.get_env("XDG_DATA_HOME", Path.join(home, ".local/share"))
     Path.join([data_dir, "time_watcher", ".erlang.cookie"])
   end
 

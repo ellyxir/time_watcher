@@ -5,13 +5,13 @@ defmodule TimeWatcher.CLI do
 
   alias TimeWatcher.{Client, Daemon, Report, Storage}
 
-  @type command ::
-          {:report, String.t()}
-          | {:watch, [String.t()]}
-          | {:add, [String.t()]}
-          | :list
-          | {:remove, [String.t()]}
-          | :help
+  @typep command ::
+           {:report, String.t()}
+           | {:watch, [String.t()]}
+           | {:add, [String.t()]}
+           | :list
+           | {:remove, [String.t()]}
+           | :help
 
   @spec main([String.t()]) :: :ok
   def main(args) do

@@ -86,6 +86,21 @@ defmodule TimeWatcher.WatcherTest do
 
       GenServer.stop(pid)
     end
+
+    test "allows directory with similar prefix to data directory", %{data_dir: data_dir} do
+      # e.g., data_dir is /tmp/time_watcher, watch_dir is /tmp/time_watcher_project
+      # These should NOT conflict - they are sibling directories
+      similar_dir = data_dir <> "_project"
+      File.mkdir_p!(similar_dir)
+      on_exit(fn -> File.rm_rf!(similar_dir) end)
+
+      {:ok, pid} = Watcher.start_link(dirs: [], data_dir: data_dir)
+
+      assert :ok = Watcher.add_dir(pid, similar_dir)
+      assert length(Watcher.list_dirs(pid)) == 1
+
+      GenServer.stop(pid)
+    end
   end
 
   describe "list_dirs/1" do

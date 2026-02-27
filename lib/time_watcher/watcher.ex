@@ -132,7 +132,8 @@ defmodule TimeWatcher.Watcher do
         {:reply, {:error, :not_watching}, state}
 
       pid ->
-        GenServer.stop(pid)
+        # Safely stop the watcher - it may already be dead
+        if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
 
         new_state = %{
           state
@@ -178,6 +179,16 @@ defmodule TimeWatcher.Watcher do
     {:noreply, state}
   end
 
+  @impl true
+  def terminate(_reason, state) do
+    # Clean up all file watchers on shutdown
+    Enum.each(state.watcher_pids, fn {_dir, pid} ->
+      if Process.alive?(pid), do: GenServer.stop(pid, :normal, 5000)
+    end)
+
+    :ok
+  end
+
   defp debounced?(path, now, state) do
     case Map.get(state.last_event_at, path) do
       nil -> false
@@ -206,6 +217,9 @@ defmodule TimeWatcher.Watcher do
 
   defp would_cause_loop?(watch_dir, data_dir) do
     # Check if watch_dir is the data_dir, contains it, or is inside it
-    String.starts_with?(watch_dir, data_dir) or String.starts_with?(data_dir, watch_dir)
+    # Use path segments to avoid false positives (e.g., /foo/bar vs /foo/bar_other)
+    watch_parts = Path.split(watch_dir)
+    data_parts = Path.split(data_dir)
+    List.starts_with?(watch_parts, data_parts) or List.starts_with?(data_parts, watch_parts)
   end
 end
