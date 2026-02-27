@@ -36,6 +36,16 @@ defmodule TimeWatcher.Client do
   end
 
   @doc """
+  Stops the running watcher daemon.
+  """
+  @spec stop_daemon() :: :ok | {:error, :daemon_not_running | :distribution_failed}
+  def stop_daemon do
+    with_daemon(fn ->
+      Watcher.stop({Watcher, Node.daemon_node_name()})
+    end)
+  end
+
+  @doc """
   Expands a path to an absolute path, resolving ~, ., and relative paths.
   Must be called on the client side before sending to daemon.
   """

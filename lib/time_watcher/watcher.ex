@@ -47,6 +47,11 @@ defmodule TimeWatcher.Watcher do
     GenServer.call(server, {:remove_dir, dir})
   end
 
+  @spec stop(GenServer.server()) :: :ok
+  def stop(server) do
+    GenServer.call(server, :stop)
+  end
+
   # Server callbacks
 
   @impl true
@@ -146,6 +151,17 @@ defmodule TimeWatcher.Watcher do
 
         {:reply, :ok, new_state}
     end
+  end
+
+  @impl true
+  def handle_call(:stop, _from, state) do
+    # Schedule application stop after reply is sent
+    spawn(fn ->
+      Process.sleep(100)
+      :init.stop()
+    end)
+
+    {:stop, :normal, :ok, state}
   end
 
   @impl true

@@ -49,13 +49,8 @@ defmodule TimeWatcher.CLITest do
       assert CLI.parse_args(["watch", "/tmp/dir1", "-v"]) == {:watch, ["/tmp/dir1"], [:verbose]}
     end
 
-    test "parses 'add' with directories" do
-      assert CLI.parse_args(["add", "/tmp/dir1", "/tmp/dir2"]) ==
-               {:add, ["/tmp/dir1", "/tmp/dir2"]}
-    end
-
-    test "add with no dirs returns help" do
-      assert CLI.parse_args(["add"]) == :help
+    test "parses 'stop'" do
+      assert CLI.parse_args(["stop"]) == :stop
     end
 
     test "parses 'list'" do

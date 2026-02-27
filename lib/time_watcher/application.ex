@@ -21,7 +21,7 @@ defmodule TimeWatcher.Application do
 
         {:error, _reason} ->
           IO.puts("Error: Another daemon is already running.")
-          IO.puts("Use 'tw add <dir>' to add directories to the running daemon.")
+          IO.puts("Use 'tw watch <dir>' to add directories to the running daemon.")
           System.halt(1)
       end
     else

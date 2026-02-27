@@ -8,7 +8,7 @@ defmodule TimeWatcher.CLI do
   @typep command ::
            {:report, String.t(), keyword()}
            | {:watch, [String.t()], [atom()]}
-           | {:add, [String.t()]}
+           | :stop
            | :list
            | {:remove, [String.t()]}
            | :help
@@ -30,8 +30,8 @@ defmodule TimeWatcher.CLI do
     {:watch, dirs, opts}
   end
 
-  def parse_args(["add" | dirs]) when dirs != [] do
-    {:add, dirs}
+  def parse_args(["stop"]) do
+    :stop
   end
 
   def parse_args(["list"]) do
@@ -103,29 +103,25 @@ defmodule TimeWatcher.CLI do
         :ok
 
       {:error, :already_running} ->
-        IO.puts("Error: Daemon is already running. Use 'tw add' to add directories.")
+        # Daemon already running - add the directories to it
+        add_directories(dirs)
 
       {:error, reason} ->
         IO.puts("Error starting daemon: #{inspect(reason)}")
     end
   end
 
-  defp run({:add, dirs}) do
-    Enum.each(dirs, fn dir ->
-      case Client.add_directory(dir) do
-        :ok ->
-          IO.puts("Added: #{dir}")
+  defp run(:stop) do
+    case Client.stop_daemon() do
+      :ok ->
+        IO.puts("Daemon stopped.")
 
-        {:error, :already_watching} ->
-          IO.puts("Already watching: #{dir}")
+      {:error, :daemon_not_running} ->
+        IO.puts("Daemon is not running.")
 
-        {:error, :would_cause_loop} ->
-          IO.puts("Cannot watch #{dir}: would cause infinite loop (contains or is inside data directory)")
-
-        {:error, reason} ->
-          IO.puts("Error adding #{dir}: #{inspect(reason)}")
-      end
-    end)
+      {:error, reason} ->
+        IO.puts("Error stopping daemon: #{inspect(reason)}")
+    end
   end
 
   defp run(:list) do
@@ -163,8 +159,8 @@ defmodule TimeWatcher.CLI do
     tw - git-based time tracker
 
     Usage:
-      tw watch [-v] [dir1 dir2 ...]           Start daemon watching directories (default: .)
-      tw add <dir1 dir2 ...>                  Add directories to running daemon
+      tw watch [-v] [dir1 dir2 ...]           Start daemon or add directories to it
+      tw stop                                 Stop the daemon
       tw list                                 List watched directories
       tw remove <dir1 dir2 ...>               Remove directories from daemon
       tw report [YYYY-MM-DD] [--cooldown N]   Show activity report (default: today)
@@ -185,5 +181,24 @@ defmodule TimeWatcher.CLI do
 
   defp print_dir(dir) do
     IO.puts("  #{dir.path} (#{dir.repo})")
+  end
+
+  @spec add_directories([String.t()]) :: :ok
+  defp add_directories(dirs) do
+    Enum.each(dirs, fn dir ->
+      case Client.add_directory(dir) do
+        :ok ->
+          IO.puts("Added: #{dir}")
+
+        {:error, :already_watching} ->
+          IO.puts("Already watching: #{dir}")
+
+        {:error, :would_cause_loop} ->
+          IO.puts("Cannot watch #{dir}: would cause infinite loop (contains or is inside data directory)")
+
+        {:error, reason} ->
+          IO.puts("Error adding #{dir}: #{inspect(reason)}")
+      end
+    end)
   end
 end

@@ -12,6 +12,11 @@ ensure_epmd() {
   fi
 }
 
+# Check if daemon is running by looking for tw_watcher in epmd names
+daemon_running() {
+  epmd -names 2>/dev/null | grep -q "name tw_watcher"
+}
+
 # Encode args as newline-delimited env var for Elixir to parse
 export TW_ARGV=""
 for arg in "$@"; do
@@ -23,14 +28,18 @@ $arg"
   fi
 done
 
-# Route 'watch' command to 'start' mode (daemon), others to 'eval' mode
 COMMAND="${1:-}"
 
 if [ "$COMMAND" = "watch" ]; then
-  # Start epmd and run as daemon using 'start' mode
   ensure_epmd
-  exec "$RELEASE_ROOT/bin/time_watcher" start
-elif [ "$COMMAND" = "add" ] || [ "$COMMAND" = "list" ] || [ "$COMMAND" = "remove" ]; then
+  if daemon_running; then
+    # Daemon already running, use eval to add directories
+    exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
+  else
+    # Start daemon in background
+    "$RELEASE_ROOT/bin/time_watcher" daemon
+  fi
+elif [ "$COMMAND" = "stop" ] || [ "$COMMAND" = "list" ] || [ "$COMMAND" = "remove" ]; then
   # Client commands need epmd for distribution
   ensure_epmd
   exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
