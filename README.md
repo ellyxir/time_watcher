@@ -294,4 +294,4 @@ mix dialyzer          # Type checking
 
 ## License
 
-MIT
+Apache 2.0
