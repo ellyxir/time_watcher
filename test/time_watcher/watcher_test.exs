@@ -202,6 +202,44 @@ defmodule TimeWatcher.WatcherTest do
     end
   end
 
+  describe "nested directories" do
+    test "file in nested watched dir uses most specific repo", %{data_dir: data_dir} do
+      parent_dir = Path.join(System.tmp_dir!(), "tw_parent_#{System.unique_integer([:positive])}")
+      child_dir = Path.join(parent_dir, "child")
+      File.mkdir_p!(child_dir)
+      on_exit(fn -> File.rm_rf!(parent_dir) end)
+
+      {:ok, pid} = Watcher.start_link(dirs: [parent_dir, child_dir], data_dir: data_dir)
+
+      # Simulate event for file in child directory
+      file_path = Path.join(child_dir, "test.ex")
+      send(pid, {:file_event, self(), {file_path, [:modified]}})
+      Process.sleep(100)
+
+      # Check that the event was recorded with the child repo, not parent
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      events =
+        case File.ls(date_dir) do
+          {:ok, files} ->
+            files
+            |> Enum.filter(&String.ends_with?(&1, ".json"))
+            |> Enum.map(fn file ->
+              {:ok, content} = File.read(Path.join(date_dir, file))
+              Jason.decode!(content)
+            end)
+
+          _ ->
+            []
+        end
+
+      assert length(events) == 1
+      assert hd(events)["repo"] == "child"
+
+      GenServer.stop(pid)
+    end
+  end
+
   describe "map_event_type/1" do
     test "maps :created" do
       assert Watcher.map_event_type([:created]) == :created

@@ -197,9 +197,14 @@ defmodule TimeWatcher.Watcher do
   end
 
   defp find_repo(path, dir_repo_map) do
-    Enum.find_value(dir_repo_map, fn {dir, repo} ->
-      if String.starts_with?(path, dir), do: repo
-    end)
+    # Find the most specific (longest) matching directory
+    dir_repo_map
+    |> Enum.filter(fn {dir, _repo} -> String.starts_with?(path, dir <> "/") end)
+    |> Enum.max_by(fn {dir, _repo} -> String.length(dir) end, fn -> nil end)
+    |> case do
+      {_dir, repo} -> repo
+      nil -> nil
+    end
   end
 
   defp hash_path(path) do
