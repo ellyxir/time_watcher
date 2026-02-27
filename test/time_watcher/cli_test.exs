@@ -245,5 +245,17 @@ defmodule TimeWatcher.CLITest do
     test "commit with -m but no message returns help" do
       assert CLI.parse_args(["commit", "-m"]) == :help
     end
+
+    test "parses 'reset' defaults to today" do
+      assert CLI.parse_args(["reset"]) == {:reset, Date.to_string(Date.utc_today())}
+    end
+
+    test "parses 'reset' with specific date" do
+      assert CLI.parse_args(["reset", "2026-02-25"]) == {:reset, "2026-02-25"}
+    end
+
+    test "parses 'reset --all'" do
+      assert CLI.parse_args(["reset", "--all"]) == {:reset, :all}
+    end
   end
 end

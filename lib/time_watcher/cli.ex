@@ -13,6 +13,7 @@ defmodule TimeWatcher.CLI do
            | {:remove, [String.t()]}
            | :commit
            | {:commit, String.t()}
+           | {:reset, String.t() | :all}
            | :help
            | {:error, String.t()}
 
@@ -57,6 +58,18 @@ defmodule TimeWatcher.CLI do
 
   def parse_args(["commit", "--message", message]) do
     {:commit, message}
+  end
+
+  def parse_args(["reset"]) do
+    {:reset, Date.to_string(Date.utc_today())}
+  end
+
+  def parse_args(["reset", "--all"]) do
+    {:reset, :all}
+  end
+
+  def parse_args(["reset", date]) do
+    {:reset, date}
   end
 
   def parse_args(_) do
@@ -280,6 +293,14 @@ defmodule TimeWatcher.CLI do
     run_commit(message)
   end
 
+  defp run({:reset, :all}) do
+    run_reset_all()
+  end
+
+  defp run({:reset, date}) do
+    run_reset_date(date)
+  end
+
   defp run(:help) do
     IO.puts("""
     tw - git-based time tracker
@@ -291,6 +312,8 @@ defmodule TimeWatcher.CLI do
       tw remove <dir1 dir2 ...>               Remove directories from daemon
       tw report [YYYY-MM-DD] [options]        Show activity report (default: today)
       tw commit [-m "message"]                Commit event data to git
+      tw reset [YYYY-MM-DD]                   Delete events for date (default: today)
+      tw reset --all                          Delete all events
 
     Options:
       -v, --verbose      Print events as they are recorded
@@ -309,6 +332,26 @@ defmodule TimeWatcher.CLI do
 
       {:error, reason} ->
         IO.puts("Commit failed: #{inspect(reason)}")
+    end
+  end
+
+  defp run_reset_date(date) do
+    with {:ok, count} when count > 0 <- Storage.delete_events(date),
+         :ok <- Storage.git_stage_all() do
+      IO.puts("Deleted #{count} event(s) for #{date}. Run 'tw commit' to finalize.")
+    else
+      {:ok, 0} -> IO.puts("No events found for #{date}")
+      {:error, reason} -> IO.puts("Failed to stage deletions: #{inspect(reason)}")
+    end
+  end
+
+  defp run_reset_all do
+    with {:ok, count} when count > 0 <- Storage.delete_all_events(),
+         :ok <- Storage.git_stage_all() do
+      IO.puts("Deleted #{count} event(s). Run 'tw commit' to finalize.")
+    else
+      {:ok, 0} -> IO.puts("No events found")
+      {:error, reason} -> IO.puts("Failed to stage deletions: #{inspect(reason)}")
     end
   end
 

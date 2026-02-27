@@ -129,6 +129,28 @@ With `--md`:
 **Total: 3h 33m**
 ```
 
+### Reset events
+
+Delete recorded events when you want to clear your history:
+
+```sh
+# Delete today's events
+tw reset
+
+# Delete events for a specific date
+tw reset 2026-02-25
+
+# Delete all events
+tw reset --all
+```
+
+Deletions are staged in git but not committed. Run `tw commit` afterward to finalize:
+
+```sh
+tw reset 2026-02-25
+tw commit -m "remove feb 25 data"
+```
+
 ## Data storage
 
 Events are stored as JSON files in `~/.local/share/time_watcher/`, organized by date:
