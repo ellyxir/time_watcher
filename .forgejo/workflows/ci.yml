@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches: [main]
@@ -8,34 +7,44 @@ on:
 
 jobs:
   test:
-    runs-on: codeberg-small
-
-    container:
-      image: hexpm/elixir:1.18.3-erlang-27.2.4-debian-bookworm-20250224
-
+    runs-on: codeberg-medium
+    env:
+      MIX_ENV: test
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - uses: https://code.forgejo.org/erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18.3'
+          otp-version: '27.2.4'
+      - uses: https://code.forgejo.org/actions/cache@v4
         with:
           path: |
             deps
             _build
           key: mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: mix-
+      - run: mix local.hex --force && mix local.rebar --force && mix deps.get
+      - run: mix format --check-formatted
+      - run: mix credo --strict
+      - run: mix test
 
-      - name: Install dependencies
-        run: mix local.hex --force && mix local.rebar --force && mix deps.get
-
-      - name: Check formatting
-        run: mix format --check-formatted
-
-      - name: Run Credo
-        run: mix credo --strict
-
-      - name: Run tests
-        run: mix test
-
-      - name: Run Dialyzer
-        run: mix dialyzer
+  dialyzer:
+    runs-on: codeberg-medium
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - uses: https://code.forgejo.org/erlef/setup-beam@v1
+        with:
+          elixir-version: '1.18.3'
+          otp-version: '27.2.4'
+      - uses: https://code.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+            priv/plts
+          key: dialyzer-${{ hashFiles('**/mix.lock') }}
+          restore-keys: dialyzer-
+      - run: mix local.hex --force && mix local.rebar --force && mix deps.get
+      - run: mix dialyzer
