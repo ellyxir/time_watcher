@@ -3,6 +3,22 @@ defmodule TimeWatcher.ClientTest do
 
   alias TimeWatcher.Client
 
+  describe "path expansion" do
+    test "expand_path converts relative paths to absolute" do
+      # Save current dir
+      {:ok, cwd} = File.cwd()
+
+      assert Client.expand_path(".") == cwd
+      assert Client.expand_path("./subdir") == Path.join(cwd, "subdir")
+      assert Client.expand_path("~") == System.user_home()
+    end
+
+    test "expand_path preserves absolute paths" do
+      assert Client.expand_path("/tmp/foo") == "/tmp/foo"
+      assert Client.expand_path("/home/user/projects") == "/home/user/projects"
+    end
+  end
+
   describe "connection error handling" do
     # In test environment without epmd, distribution fails to start
     # The important thing is that these don't crash and return an error tuple

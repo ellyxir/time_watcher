@@ -12,7 +12,8 @@ defmodule TimeWatcher.Client do
           :ok
           | {:error, :already_watching | :would_cause_loop | :daemon_not_running | :distribution_failed}
   def add_directory(dir) do
-    with_daemon(fn -> Watcher.add_dir({Watcher, Node.daemon_node_name()}, dir) end)
+    expanded = expand_path(dir)
+    with_daemon(fn -> Watcher.add_dir({Watcher, Node.daemon_node_name()}, expanded) end)
   end
 
   @doc """
@@ -30,7 +31,17 @@ defmodule TimeWatcher.Client do
   """
   @spec remove_directory(String.t()) :: :ok | {:error, :not_watching | :daemon_not_running | :distribution_failed}
   def remove_directory(dir) do
-    with_daemon(fn -> Watcher.remove_dir({Watcher, Node.daemon_node_name()}, dir) end)
+    expanded = expand_path(dir)
+    with_daemon(fn -> Watcher.remove_dir({Watcher, Node.daemon_node_name()}, expanded) end)
+  end
+
+  @doc """
+  Expands a path to an absolute path, resolving ~, ., and relative paths.
+  Must be called on the client side before sending to daemon.
+  """
+  @spec expand_path(String.t()) :: String.t()
+  def expand_path(path) do
+    Path.expand(path)
   end
 
   @doc """
