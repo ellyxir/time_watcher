@@ -26,6 +26,7 @@ defmodule TimeWatcher.Watcher do
     cond do
       :created in types -> :created
       :removed in types -> :deleted
+      :deleted in types -> :deleted
       :modified in types -> :modified
       true -> :modified
     end

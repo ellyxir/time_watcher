@@ -253,6 +253,10 @@ defmodule TimeWatcher.WatcherTest do
       assert Watcher.map_event_type([:removed]) == :deleted
     end
 
+    test "maps :deleted to :deleted (linux inotify)" do
+      assert Watcher.map_event_type([:deleted]) == :deleted
+    end
+
     test "maps :renamed to :modified" do
       assert Watcher.map_event_type([:renamed]) == :modified
     end
