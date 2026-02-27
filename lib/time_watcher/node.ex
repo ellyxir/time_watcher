@@ -8,7 +8,7 @@ defmodule TimeWatcher.Node do
   """
   @spec daemon_node_name() :: atom()
   def daemon_node_name do
-    :"tw_watcher@localhost"
+    :tw_watcher@localhost
   end
 
   @doc """

@@ -10,7 +10,8 @@ defmodule TimeWatcher.Client do
   """
   @spec add_directory(String.t()) ::
           :ok
-          | {:error, :already_watching | :would_cause_loop | :daemon_not_running | :distribution_failed}
+          | {:error,
+             :already_watching | :would_cause_loop | :daemon_not_running | :distribution_failed}
   def add_directory(dir) do
     expanded = expand_path(dir)
     with_daemon(fn -> Watcher.add_dir({Watcher, Node.daemon_node_name()}, expanded) end)
@@ -29,7 +30,8 @@ defmodule TimeWatcher.Client do
   @doc """
   Removes a directory from the running watcher daemon.
   """
-  @spec remove_directory(String.t()) :: :ok | {:error, :not_watching | :daemon_not_running | :distribution_failed}
+  @spec remove_directory(String.t()) ::
+          :ok | {:error, :not_watching | :daemon_not_running | :distribution_failed}
   def remove_directory(dir) do
     expanded = expand_path(dir)
     with_daemon(fn -> Watcher.remove_dir({Watcher, Node.daemon_node_name()}, expanded) end)

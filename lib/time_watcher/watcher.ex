@@ -32,7 +32,8 @@ defmodule TimeWatcher.Watcher do
     end
   end
 
-  @spec add_dir(GenServer.server(), String.t()) :: :ok | {:error, :already_watching | :would_cause_loop}
+  @spec add_dir(GenServer.server(), String.t()) ::
+          :ok | {:error, :already_watching | :would_cause_loop}
   def add_dir(server, dir) do
     GenServer.call(server, {:add_dir, dir})
   end
@@ -69,7 +70,9 @@ defmodule TimeWatcher.Watcher do
       |> Enum.reject(&would_cause_loop?(&1, expanded_data_dir))
 
     if length(safe_dirs) < length(dirs) do
-      Logger.warning("Some directories were excluded to prevent infinite loops with data directory")
+      Logger.warning(
+        "Some directories were excluded to prevent infinite loops with data directory"
+      )
     end
 
     dir_repo_map =

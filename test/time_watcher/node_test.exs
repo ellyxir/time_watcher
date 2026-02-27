@@ -5,7 +5,7 @@ defmodule TimeWatcher.NodeTest do
 
   describe "daemon_node_name/0" do
     test "returns deterministic daemon node name" do
-      assert Node.daemon_node_name() == :"tw_watcher@localhost"
+      assert Node.daemon_node_name() == :tw_watcher@localhost
     end
   end
 
@@ -44,7 +44,9 @@ defmodule TimeWatcher.NodeTest do
 
   describe "ensure_cookie/0" do
     setup do
-      test_dir = Path.join(System.tmp_dir!(), "tw_node_test_#{System.unique_integer([:positive])}")
+      test_dir =
+        Path.join(System.tmp_dir!(), "tw_node_test_#{System.unique_integer([:positive])}")
+
       File.mkdir_p!(test_dir)
       on_exit(fn -> File.rm_rf!(test_dir) end)
       %{test_dir: test_dir}

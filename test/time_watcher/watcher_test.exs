@@ -32,7 +32,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "returns error when directory already watched", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "returns error when directory already watched", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir)
 
       assert {:error, :already_watching} = Watcher.add_dir(pid, watch_dir)
@@ -76,7 +79,9 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "returns error when adding a parent directory of the data directory", %{data_dir: data_dir} do
+    test "returns error when adding a parent directory of the data directory", %{
+      data_dir: data_dir
+    } do
       parent_dir = Path.dirname(data_dir)
 
       {:ok, pid} = Watcher.start_link(dirs: [], data_dir: data_dir)
@@ -112,7 +117,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "returns watched directories with paths and repos", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "returns watched directories with paths and repos", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir)
 
       dirs = Watcher.list_dirs(pid)
@@ -125,7 +133,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "lists multiple directories initialized at start", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "lists multiple directories initialized at start", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       watch_dir2 = Path.join(System.tmp_dir!(), "tw_watch2_#{System.unique_integer([:positive])}")
       File.mkdir_p!(watch_dir2)
       on_exit(fn -> File.rm_rf!(watch_dir2) end)
@@ -142,7 +153,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "excludes data directory from initial dirs to prevent loops", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "excludes data directory from initial dirs to prevent loops", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       {:ok, pid} = Watcher.start_link(dirs: [watch_dir, data_dir], data_dir: data_dir)
 
       dirs = Watcher.list_dirs(pid)
@@ -174,7 +188,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "stops the file watcher for removed directory", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "stops the file watcher for removed directory", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir)
 
       # Get initial state to check watcher pid
@@ -267,7 +284,10 @@ defmodule TimeWatcher.WatcherTest do
   end
 
   describe "multiple directory events" do
-    test "records events from multiple watched directories", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "records events from multiple watched directories", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       watch_dir2 = Path.join(System.tmp_dir!(), "tw_watch2_#{System.unique_integer([:positive])}")
       File.mkdir_p!(watch_dir2)
       on_exit(fn -> File.rm_rf!(watch_dir2) end)
@@ -333,7 +353,10 @@ defmodule TimeWatcher.WatcherTest do
       GenServer.stop(pid)
     end
 
-    test "allows events after debounce window expires", %{data_dir: data_dir, watch_dir: watch_dir} do
+    test "allows events after debounce window expires", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
       {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, debounce_seconds: 0)
 
       path = Path.join(watch_dir, "foo.ex")
