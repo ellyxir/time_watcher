@@ -2,6 +2,14 @@
 
 A git-based time tracker that watches your filesystem for changes and automatically records work activity. No cloud services needed — syncs across machines via git.
 
+## Why
+
+I do consulting work for different clients. I often work in short bursts, so I can't easily use a Toggl-like solution where you click on and off. I take breaks all the time or get distracted. I really needed a system that would automatically track my work for me.
+
+TimeWatcher does this by watching directories you specify and recording file activity. As long as two activities are close together (within the cooldown window — 5 minutes by default), they're considered consecutive work time. Modifying, adding, or removing a file all count as "work".
+
+Hope you find it helpful!
+
 ## How it works
 
 1. **Watch** — Run `tw watch` in your project directory. TimeWatcher monitors file changes and logs each event as a JSON file.
