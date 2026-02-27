@@ -84,7 +84,12 @@ tw report 2026-02-25
 
 # Markdown format (for pasting into notes, PRs, etc.)
 tw report --md
+
+# Custom cooldown (minutes of inactivity that still count as continuous work)
+tw report --cooldown 15
 ```
+
+The default cooldown is 5 minutes — if you stop editing for more than 5 minutes, it's treated as a break. Use `--cooldown` to adjust this threshold.
 
 Example output:
 
