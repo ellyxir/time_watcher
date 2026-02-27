@@ -7,7 +7,7 @@ defmodule TimeWatcher.CLI do
 
   @typep command ::
            {:report, String.t()}
-           | {:watch, [String.t()]}
+           | {:watch, [String.t()], [atom()]}
            | {:add, [String.t()]}
            | :list
            | {:remove, [String.t()]}
@@ -27,12 +27,19 @@ defmodule TimeWatcher.CLI do
     {:report, Date.to_string(Date.utc_today())}
   end
 
-  def parse_args(["watch" | []]) do
-    {:watch, ["."]}
+  def parse_args(["watch" | rest]) do
+    {dirs, opts} = parse_watch_args(rest)
+    dirs = if dirs == [], do: ["."], else: dirs
+    {:watch, dirs, opts}
   end
 
-  def parse_args(["watch" | dirs]) do
-    {:watch, dirs}
+  @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
+  defp parse_watch_args(args) do
+    Enum.reduce(args, {[], []}, fn
+      "-v", {dirs, opts} -> {dirs, [:verbose | opts]}
+      "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
+      dir, {dirs, opts} -> {dirs ++ [dir], opts}
+    end)
   end
 
   def parse_args(["add" | dirs]) when dirs != [] do
@@ -68,8 +75,9 @@ defmodule TimeWatcher.CLI do
     end
   end
 
-  defp run({:watch, dirs}) do
-    case Daemon.start_daemon(dirs: dirs) do
+  defp run({:watch, dirs, opts}) do
+    verbose = :verbose in opts
+    case Daemon.start_daemon(dirs: dirs, verbose: verbose) do
       :ok ->
         :ok
 
@@ -134,11 +142,14 @@ defmodule TimeWatcher.CLI do
     tw - git-based time tracker
 
     Usage:
-      tw watch [dir1 dir2 ...]   Start daemon watching directories (default: .)
-      tw add <dir1 dir2 ...>     Add directories to running daemon
-      tw list                    List watched directories
-      tw remove <dir1 dir2 ...>  Remove directories from daemon
-      tw report [YYYY-MM-DD]     Show activity report (default: today)
+      tw watch [-v] [dir1 dir2 ...]  Start daemon watching directories (default: .)
+      tw add <dir1 dir2 ...>         Add directories to running daemon
+      tw list                        List watched directories
+      tw remove <dir1 dir2 ...>      Remove directories from daemon
+      tw report [YYYY-MM-DD]         Show activity report (default: today)
+
+    Options:
+      -v, --verbose   Print events as they are recorded
     """)
   end
 

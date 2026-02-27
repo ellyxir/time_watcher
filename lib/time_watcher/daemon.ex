@@ -17,6 +17,7 @@ defmodule TimeWatcher.Daemon do
   def start_daemon(opts) do
     dirs = Keyword.get(opts, :dirs, ["."])
     data_dir = Keyword.get(opts, :data_dir, Storage.data_dir())
+    verbose = Keyword.get(opts, :verbose, false)
 
     with :ok <- check_not_already_running(),
          :ok <- start_distribution() do
@@ -26,6 +27,7 @@ defmodule TimeWatcher.Daemon do
         Watcher.start_link(
           dirs: dirs,
           data_dir: data_dir,
+          verbose: verbose,
           name: Watcher
         )
 

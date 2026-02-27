@@ -54,6 +54,7 @@ defmodule TimeWatcher.Watcher do
     data_dir = Keyword.get(opts, :data_dir, Storage.data_dir())
     expanded_data_dir = Path.expand(data_dir)
     debounce_seconds = Keyword.get(opts, :debounce_seconds, @default_debounce_seconds)
+    verbose = Keyword.get(opts, :verbose, false)
 
     # Filter out directories that would cause infinite loops
     safe_dirs =
@@ -83,7 +84,8 @@ defmodule TimeWatcher.Watcher do
        data_dir: data_dir,
        debounce_seconds: debounce_seconds,
        last_event_at: %{},
-       watcher_pids: watcher_pids
+       watcher_pids: watcher_pids,
+       verbose: verbose
      }}
   end
 
@@ -148,26 +150,11 @@ defmodule TimeWatcher.Watcher do
   @impl true
   def handle_info({:file_event, _pid, {path, events}}, state) do
     now = System.system_time(:second)
-    event_type = map_event_type(events)
-
     repo = find_repo(path, state.dir_repo_map)
 
     if repo && !debounced?(path, now, state) do
-      event = %Event{
-        timestamp: now,
-        repo: repo,
-        hashed_path: hash_path(path),
-        event_type: event_type
-      }
-
-      case Storage.save_event(event, state.data_dir) do
-        :ok ->
-          fire_and_forget_commit(state.data_dir)
-
-        {:error, reason} ->
-          Logger.warning("Failed to save event: #{inspect(reason)}")
-      end
-
+      event = build_event(path, events, repo, now)
+      save_and_commit(event, path, state)
       {:noreply, %{state | last_event_at: Map.put(state.last_event_at, path, now)}}
     else
       {:noreply, state}
@@ -196,6 +183,26 @@ defmodule TimeWatcher.Watcher do
     end
   end
 
+  defp build_event(path, events, repo, now) do
+    %Event{
+      timestamp: now,
+      repo: repo,
+      hashed_path: hash_path(path),
+      event_type: map_event_type(events)
+    }
+  end
+
+  defp save_and_commit(event, path, state) do
+    case Storage.save_event(event, state.data_dir) do
+      :ok ->
+        if state.verbose, do: print_event(event, path)
+        fire_and_forget_commit(state.data_dir)
+
+      {:error, reason} ->
+        Logger.warning("Failed to save event: #{inspect(reason)}")
+    end
+  end
+
   defp find_repo(path, dir_repo_map) do
     # Find the most specific (longest) matching directory
     dir_repo_map
@@ -209,6 +216,12 @@ defmodule TimeWatcher.Watcher do
 
   defp hash_path(path) do
     :crypto.hash(:sha256, path) |> Base.encode16(case: :lower)
+  end
+
+  @spec print_event(Event.t(), String.t()) :: :ok
+  defp print_event(event, path) do
+    time = event.timestamp |> DateTime.from_unix!() |> Calendar.strftime("%H:%M:%S")
+    IO.puts("[#{time}] #{event.event_type} #{event.repo}: #{Path.basename(path)}")
   end
 
   defp fire_and_forget_commit(data_dir) do

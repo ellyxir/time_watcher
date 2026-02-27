@@ -14,11 +14,24 @@ defmodule TimeWatcher.CLITest do
 
     test "parses 'watch' with directories" do
       assert CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"]) ==
-               {:watch, ["/tmp/dir1", "/tmp/dir2"]}
+               {:watch, ["/tmp/dir1", "/tmp/dir2"], []}
     end
 
     test "watch with no dirs defaults to current directory" do
-      assert CLI.parse_args(["watch"]) == {:watch, ["."]}
+      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+    end
+
+    test "watch with -v flag enables verbose" do
+      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+    end
+
+    test "watch with --verbose flag enables verbose" do
+      assert CLI.parse_args(["watch", "--verbose"]) == {:watch, ["."], [:verbose]}
+    end
+
+    test "watch with dirs and -v flag" do
+      assert CLI.parse_args(["watch", "-v", "/tmp/dir1"]) == {:watch, ["/tmp/dir1"], [:verbose]}
+      assert CLI.parse_args(["watch", "/tmp/dir1", "-v"]) == {:watch, ["/tmp/dir1"], [:verbose]}
     end
 
     test "parses 'add' with directories" do

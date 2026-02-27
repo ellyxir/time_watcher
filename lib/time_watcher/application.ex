@@ -9,13 +9,13 @@ defmodule TimeWatcher.Application do
     if daemon_mode?() do
       case start_distribution() do
         :ok ->
-          dirs = parse_watch_dirs()
+          {dirs, verbose} = parse_watch_args()
           data_dir = Storage.data_dir()
           File.mkdir_p!(data_dir)
 
           IO.puts("Daemon started, watching: #{Enum.join(dirs, ", ")}")
 
-          children = [{Watcher, dirs: dirs, data_dir: data_dir, name: Watcher}]
+          children = [{Watcher, dirs: dirs, data_dir: data_dir, verbose: verbose, name: Watcher}]
           opts = [strategy: :one_for_one, name: TimeWatcher.Supervisor]
           Supervisor.start_link(children, opts)
 
@@ -38,11 +38,24 @@ defmodule TimeWatcher.Application do
     end
   end
 
-  defp parse_watch_dirs do
-    case System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) do
-      ["watch"] -> ["."]
-      ["watch" | dirs] -> dirs
-      _ -> ["."]
+  @spec parse_watch_args() :: {[String.t()], boolean()}
+  defp parse_watch_args do
+    args = System.get_env("TW_ARGV", "") |> String.split("\n", trim: true)
+
+    case args do
+      ["watch" | rest] ->
+        {dirs, verbose} =
+          Enum.reduce(rest, {[], false}, fn
+            "-v", {dirs, _} -> {dirs, true}
+            "--verbose", {dirs, _} -> {dirs, true}
+            dir, {dirs, verbose} -> {dirs ++ [dir], verbose}
+          end)
+
+        dirs = if dirs == [], do: ["."], else: dirs
+        {dirs, verbose}
+
+      _ ->
+        {["."], false}
     end
   end
 
