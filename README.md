@@ -46,14 +46,18 @@ ln -s "$(pwd)/_build/prod/rel/time_watcher/bin/tw" ~/.local/bin/tw
 ### Start the watcher daemon
 
 ```sh
-# Watch the current directory
+# Watch the current directory (runs in background)
 tw watch
 
 # Watch specific directories
 tw watch ~/projects/app1 ~/projects/app2
+
+# Verbose mode: run in foreground, print events as they happen
+tw watch -v
 ```
 
-Leave this running in a terminal (or background it) while you work.
+Without `-v`, the daemon runs in the background and you can close the terminal.
+With `-v`, it stays in the foreground and prints each file change as it's recorded — useful for debugging or seeing activity in real-time. Press Ctrl+C to stop.
 
 ### Manage watched directories
 

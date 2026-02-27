@@ -30,11 +30,24 @@ done
 
 COMMAND="${1:-}"
 
+# Check if verbose flag is present
+has_verbose() {
+  for arg in "$@"; do
+    case "$arg" in
+      -v|--verbose) return 0 ;;
+    esac
+  done
+  return 1
+}
+
 if [ "$COMMAND" = "watch" ]; then
   ensure_epmd
   if daemon_running; then
     # Daemon already running, use eval to add directories
     exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
+  elif has_verbose "$@"; then
+    # Verbose mode: run in foreground so output is visible
+    exec "$RELEASE_ROOT/bin/time_watcher" start
   else
     # Start daemon in background
     "$RELEASE_ROOT/bin/time_watcher" daemon
