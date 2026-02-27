@@ -1,6 +1,8 @@
 defmodule TimeWatcher.WatcherTest do
   use ExUnit.Case, async: false
 
+  import ExUnit.CaptureIO
+
   alias TimeWatcher.Watcher
 
   setup do
@@ -375,6 +377,63 @@ defmodule TimeWatcher.WatcherTest do
 
       assert event_count == 2
       GenServer.stop(pid)
+    end
+  end
+
+  describe "verbose mode" do
+    test "prints watched repos on init when verbose", %{data_dir: data_dir, watch_dir: watch_dir} do
+      output =
+        capture_io(fn ->
+          {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, verbose: true)
+          GenServer.stop(pid)
+        end)
+
+      assert output =~ "Watching:"
+      assert output =~ Path.basename(watch_dir)
+    end
+
+    test "does not print on init when verbose is false", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
+      output =
+        capture_io(fn ->
+          {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, verbose: false)
+          GenServer.stop(pid)
+        end)
+
+      assert output == ""
+    end
+
+    test "prints added repo when verbose", %{data_dir: data_dir, watch_dir: watch_dir} do
+      watch_dir2 = Path.join(System.tmp_dir!(), "tw_watch2_#{System.unique_integer([:positive])}")
+      File.mkdir_p!(watch_dir2)
+      on_exit(fn -> File.rm_rf!(watch_dir2) end)
+
+      output =
+        capture_io(fn ->
+          {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, verbose: true)
+          Watcher.add_dir(pid, watch_dir2)
+          GenServer.stop(pid)
+        end)
+
+      assert output =~ "Added:"
+      assert output =~ Path.basename(watch_dir2)
+    end
+
+    test "prints event when verbose and file changes", %{data_dir: data_dir, watch_dir: watch_dir} do
+      output =
+        capture_io(fn ->
+          {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, verbose: true)
+          path = Path.join(watch_dir, "test.ex")
+          send(pid, {:file_event, self(), {path, [:modified]}})
+          Process.sleep(100)
+          GenServer.stop(pid)
+        end)
+
+      assert output =~ "modified"
+      assert output =~ Path.basename(watch_dir)
+      assert output =~ "test.ex"
     end
   end
 end

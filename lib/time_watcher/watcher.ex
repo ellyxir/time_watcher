@@ -87,6 +87,11 @@ defmodule TimeWatcher.Watcher do
         {expanded, pid}
       end)
 
+    if verbose do
+      repos = dir_repo_map |> Map.values() |> Enum.sort() |> Enum.join(", ")
+      IO.puts("Watching: #{repos}")
+    end
+
     {:ok,
      %{
        dir_repo_map: dir_repo_map,
@@ -113,10 +118,15 @@ defmodule TimeWatcher.Watcher do
       true ->
         {:ok, pid} = FileSystem.start_link(dirs: [expanded])
         FileSystem.subscribe(pid)
+        repo = detect_repo(expanded)
+
+        if state.verbose do
+          IO.puts("Added: #{repo}")
+        end
 
         new_state = %{
           state
-          | dir_repo_map: Map.put(state.dir_repo_map, expanded, detect_repo(expanded)),
+          | dir_repo_map: Map.put(state.dir_repo_map, expanded, repo),
             watcher_pids: Map.put(state.watcher_pids, expanded, pid)
         }
 
@@ -181,6 +191,7 @@ defmodule TimeWatcher.Watcher do
     end
   end
 
+  @impl true
   def handle_info({:file_event, _pid, :stop}, state) do
     Logger.warning("File watcher stopped")
     {:noreply, state}
