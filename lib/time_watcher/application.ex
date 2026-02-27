@@ -13,8 +13,6 @@ defmodule TimeWatcher.Application do
           data_dir = Storage.data_dir()
           File.mkdir_p!(data_dir)
 
-          IO.puts("Daemon started, watching: #{Enum.join(dirs, ", ")}")
-
           children = [{Watcher, dirs: dirs, data_dir: data_dir, verbose: verbose, name: Watcher}]
           opts = [strategy: :one_for_one, name: TimeWatcher.Supervisor]
           Supervisor.start_link(children, opts)

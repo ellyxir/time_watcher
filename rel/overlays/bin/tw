@@ -38,6 +38,43 @@ if [ "$COMMAND" = "watch" ]; then
   else
     # Start daemon in background
     "$RELEASE_ROOT/bin/time_watcher" daemon
+
+    # Wait up to 3 seconds for daemon to register with epmd
+    for i in 1 2 3; do
+      sleep 1
+      if daemon_running; then
+        break
+      fi
+    done
+
+    if daemon_running; then
+      # Get directories from args (skip "watch" and flags)
+      DIRS=""
+      SKIP_WATCH=true
+      for arg in "$@"; do
+        if $SKIP_WATCH; then
+          SKIP_WATCH=false
+          continue
+        fi
+        case "$arg" in
+          -v|--verbose) continue ;;
+          *)
+            if [ -z "$DIRS" ]; then
+              DIRS="$arg"
+            else
+              DIRS="$DIRS, $arg"
+            fi
+            ;;
+        esac
+      done
+      if [ -z "$DIRS" ]; then
+        DIRS="."
+      fi
+      echo "Daemon started, watching: $DIRS"
+    else
+      echo "Error: Failed to start daemon" >&2
+      exit 1
+    fi
   fi
 elif [ "$COMMAND" = "stop" ] || [ "$COMMAND" = "list" ] || [ "$COMMAND" = "remove" ]; then
   # Client commands need epmd for distribution
