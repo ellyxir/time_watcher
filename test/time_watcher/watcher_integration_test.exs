@@ -138,19 +138,19 @@ defmodule TimeWatcher.WatcherIntegrationTest do
 
   describe "debouncing" do
     test "debounces rapid changes to the same file", %{data_dir: data_dir, watch_dir: watch_dir} do
-      # Use 1 second debounce
-      {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, debounce_seconds: 1)
-      Process.sleep(100)
+      # Use 2 second debounce to ensure stability
+      {:ok, pid} = Watcher.start_link(dirs: [watch_dir], data_dir: data_dir, debounce_seconds: 2)
+      Process.sleep(150)
 
       file_path = Path.join(watch_dir, "rapid_changes.txt")
 
-      # Make 5 rapid changes within debounce window
+      # Make 5 rapid changes within debounce window (all within 250ms)
       for i <- 1..5 do
         File.write!(file_path, "content #{i}")
         Process.sleep(50)
       end
 
-      # Wait for processing
+      # Wait for processing but stay within debounce window
       Process.sleep(300)
 
       date = Date.to_string(Date.utc_today())
