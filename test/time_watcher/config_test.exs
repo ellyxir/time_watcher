@@ -13,29 +13,38 @@ defmodule TimeWatcher.ConfigTest do
 
     test "watch with no dirs uses configured dirs when present" do
       Application.put_env(:time_watcher, :dirs, ["~/projects/foo", "~/projects/bar"])
-      assert CLI.parse_args(["watch"]) == {:watch, ["~/projects/foo", "~/projects/bar"], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["~/projects/foo", "~/projects/bar"]
+      assert Keyword.get(opts, :dirs_from_config) == true
     end
 
     test "watch with explicit dirs ignores config" do
       Application.put_env(:time_watcher, :dirs, ["~/projects/foo", "~/projects/bar"])
-
-      assert CLI.parse_args(["watch", "/tmp/explicit"]) ==
-               {:watch, ["/tmp/explicit"], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch", "/tmp/explicit"])
+      assert dirs == ["/tmp/explicit"]
+      refute Keyword.get(opts, :dirs_from_config)
     end
 
     test "watch with no dirs and no config falls back to current directory" do
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :dirs_from_config) == true
     end
 
     test "watch with no dirs and empty config falls back to current directory" do
       Application.put_env(:time_watcher, :dirs, [])
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :dirs_from_config) == true
     end
 
     test "watch with verbose flag and config dirs" do
       Application.put_env(:time_watcher, :dirs, ["~/projects/foo"])
-      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["~/projects/foo"], [:verbose]}
+      {:watch, dirs, opts} = CLI.parse_args(["watch", "-v"])
+      assert dirs == ["~/projects/foo"]
+      assert Keyword.get(opts, :verbose) == true
+      assert Keyword.get(opts, :dirs_from_config) == true
     end
   end
 
@@ -55,31 +64,41 @@ defmodule TimeWatcher.ConfigTest do
     test "watch uses verbose from config when no -v flag" do
       Application.put_env(:time_watcher, :verbose, true)
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], [:verbose]}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :verbose) == true
     end
 
     test "watch without -v and config verbose: false has no verbose" do
       Application.put_env(:time_watcher, :verbose, false)
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :verbose) == false
     end
 
     test "watch -v flag overrides config verbose: false" do
       Application.put_env(:time_watcher, :verbose, false)
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+      {:watch, dirs, opts} = CLI.parse_args(["watch", "-v"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :verbose) == true
     end
 
     test "watch -v flag with config verbose: true still verbose" do
       Application.put_env(:time_watcher, :verbose, true)
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+      {:watch, dirs, opts} = CLI.parse_args(["watch", "-v"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :verbose) == true
     end
 
     test "watch with no verbose config defaults to not verbose" do
       Application.delete_env(:time_watcher, :verbose)
       Application.delete_env(:time_watcher, :dirs)
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      assert dirs == ["."]
+      assert Keyword.get(opts, :verbose) == false
     end
   end
 

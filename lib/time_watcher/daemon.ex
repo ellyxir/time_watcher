@@ -7,17 +7,24 @@ defmodule TimeWatcher.Daemon do
   for checking daemon status and for use in non-release (mix) environments.
   """
 
-  alias TimeWatcher.{Node, Storage, Watcher}
+  alias TimeWatcher.{Node, StartupMessage, Storage, Watcher}
 
   @doc """
   Starts the watcher as a distributed daemon node.
   Used in non-release (mix) environments.
+
+  ## Options
+    * `:dirs` - List of directories to watch (default: ["."])
+    * `:data_dir` - Data directory for storage (default: Storage.data_dir())
+    * `:verbose` - Whether to print verbose output (default: false)
+    * `:dirs_from_config` - Whether dirs came from config file (default: false)
   """
   @spec start_daemon(keyword()) :: :ok | {:error, term()}
   def start_daemon(opts) do
     dirs = Keyword.get(opts, :dirs, ["."])
     data_dir = Keyword.get(opts, :data_dir, Storage.data_dir())
     verbose = Keyword.get(opts, :verbose, false)
+    dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
 
     with :ok <- check_not_already_running(),
          :ok <- start_distribution() do
@@ -31,7 +38,7 @@ defmodule TimeWatcher.Daemon do
           name: Watcher
         )
 
-      IO.puts("Daemon started, watching: #{Enum.join(dirs, ", ")}")
+      IO.puts(StartupMessage.build(dirs, dirs_from_config: dirs_from_config))
 
       # Keep the process alive
       Process.sleep(:infinity)

@@ -61,29 +61,8 @@ if [ "$COMMAND" = "watch" ]; then
     done
 
     if daemon_running; then
-      # Get directories from args (skip "watch" and flags)
-      DIRS=""
-      SKIP_WATCH=true
-      for arg in "$@"; do
-        if $SKIP_WATCH; then
-          SKIP_WATCH=false
-          continue
-        fi
-        case "$arg" in
-          -v|--verbose) continue ;;
-          *)
-            if [ -z "$DIRS" ]; then
-              DIRS="$arg"
-            else
-              DIRS="$DIRS, $arg"
-            fi
-            ;;
-        esac
-      done
-      if [ -z "$DIRS" ]; then
-        DIRS="."
-      fi
-      echo "Daemon started, watching: $DIRS"
+      # Get startup message from Elixir (handles config path detection)
+      "$RELEASE_ROOT/bin/time_watcher" eval 'TimeWatcher.StartupMessage.print_startup()'
     else
       echo "Error: Failed to start daemon" >&2
       exit 1

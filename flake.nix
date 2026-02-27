@@ -19,7 +19,7 @@
       in {
         packages.default = beamPackages.mixRelease {
           pname = "time_watcher";
-          version = "0.1.0";
+          version = "0.1.1";
           src = ./.;
           mixNixDeps = deps;
 

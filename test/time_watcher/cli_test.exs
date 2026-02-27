@@ -1,7 +1,15 @@
 defmodule TimeWatcher.CLITest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias TimeWatcher.CLI
+
+  # Clear config cooldown for report tests since user may have it set
+  setup do
+    original_cooldown = Application.get_env(:time_watcher, :cooldown)
+    Application.delete_env(:time_watcher, :cooldown)
+    on_exit(fn -> Application.put_env(:time_watcher, :cooldown, original_cooldown) end)
+    :ok
+  end
 
   describe "parse_args/1" do
     test "parses 'report' with date" do
@@ -184,25 +192,37 @@ defmodule TimeWatcher.CLITest do
     end
 
     test "parses 'watch' with directories" do
-      assert CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"]) ==
-               {:watch, ["/tmp/dir1", "/tmp/dir2"], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"])
+      assert dirs == ["/tmp/dir1", "/tmp/dir2"]
+      assert Keyword.get(opts, :verbose) == false
+      refute Keyword.get(opts, :dirs_from_config)
     end
 
     test "watch with no dirs defaults to current directory" do
-      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+      {:watch, dirs, opts} = CLI.parse_args(["watch"])
+      # dirs may come from config if set, otherwise ["."]
+      assert is_list(dirs)
+      assert Keyword.get(opts, :dirs_from_config) == true
     end
 
     test "watch with -v flag enables verbose" do
-      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+      {:watch, _dirs, opts} = CLI.parse_args(["watch", "-v"])
+      assert Keyword.get(opts, :verbose) == true
     end
 
     test "watch with --verbose flag enables verbose" do
-      assert CLI.parse_args(["watch", "--verbose"]) == {:watch, ["."], [:verbose]}
+      {:watch, _dirs, opts} = CLI.parse_args(["watch", "--verbose"])
+      assert Keyword.get(opts, :verbose) == true
     end
 
     test "watch with dirs and -v flag" do
-      assert CLI.parse_args(["watch", "-v", "/tmp/dir1"]) == {:watch, ["/tmp/dir1"], [:verbose]}
-      assert CLI.parse_args(["watch", "/tmp/dir1", "-v"]) == {:watch, ["/tmp/dir1"], [:verbose]}
+      {:watch, dirs1, opts1} = CLI.parse_args(["watch", "-v", "/tmp/dir1"])
+      assert dirs1 == ["/tmp/dir1"]
+      assert Keyword.get(opts1, :verbose) == true
+
+      {:watch, dirs2, opts2} = CLI.parse_args(["watch", "/tmp/dir1", "-v"])
+      assert dirs2 == ["/tmp/dir1"]
+      assert Keyword.get(opts2, :verbose) == true
     end
 
     test "parses 'stop'" do

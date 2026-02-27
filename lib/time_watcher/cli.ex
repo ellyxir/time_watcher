@@ -7,7 +7,7 @@ defmodule TimeWatcher.CLI do
 
   @typep command ::
            {:report, String.t() | :multi_day | :date_range, keyword()}
-           | {:watch, [String.t()], [atom()]}
+           | {:watch, [String.t()], keyword()}
            | :stop
            | :list
            | {:remove, [String.t()]}
@@ -34,7 +34,14 @@ defmodule TimeWatcher.CLI do
 
   def parse_args(["watch" | rest]) do
     {dirs, opts} = parse_watch_args(rest)
-    dirs = if dirs == [], do: default_dirs(), else: dirs
+
+    {dirs, opts} =
+      if dirs == [] do
+        {default_dirs(), Keyword.put(opts, :dirs_from_config, true)}
+      else
+        {dirs, opts}
+      end
+
     {:watch, dirs, opts}
   end
 
@@ -213,24 +220,24 @@ defmodule TimeWatcher.CLI do
     end
   end
 
-  @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
+  @spec parse_watch_args([String.t()]) :: {[String.t()], keyword()}
   defp parse_watch_args(args) do
-    {dirs, opts, has_verbose_flag} =
-      Enum.reduce(args, {[], [], false}, fn
-        "-v", {dirs, opts, _} -> {dirs, [:verbose | opts], true}
-        "--verbose", {dirs, opts, _} -> {dirs, [:verbose | opts], true}
-        dir, {dirs, opts, has_flag} -> {dirs ++ [dir], opts, has_flag}
+    {dirs, has_verbose_flag} =
+      Enum.reduce(args, {[], false}, fn
+        "-v", {dirs, _} -> {dirs, true}
+        "--verbose", {dirs, _} -> {dirs, true}
+        dir, {dirs, has_flag} -> {dirs ++ [dir], has_flag}
       end)
 
     # Apply config verbose if no CLI flag was given
-    opts =
-      cond do
-        has_verbose_flag -> opts
-        Application.get_env(:time_watcher, :verbose, false) -> [:verbose | opts]
-        true -> opts
+    verbose =
+      if has_verbose_flag do
+        true
+      else
+        Application.get_env(:time_watcher, :verbose, false)
       end
 
-    {dirs, opts}
+    {dirs, [verbose: verbose]}
   end
 
   @spec default_dirs() :: [String.t()]
@@ -285,9 +292,12 @@ defmodule TimeWatcher.CLI do
   end
 
   defp run({:watch, dirs, opts}) do
-    verbose = :verbose in opts
+    verbose = Keyword.get(opts, :verbose, false)
+    dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
 
-    case Daemon.start_daemon(dirs: dirs, verbose: verbose) do
+    daemon_opts = [dirs: dirs, verbose: verbose, dirs_from_config: dirs_from_config]
+
+    case Daemon.start_daemon(daemon_opts) do
       :ok ->
         :ok
 
