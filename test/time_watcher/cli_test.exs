@@ -271,5 +271,20 @@ defmodule TimeWatcher.CLITest do
     test "decode without repo path returns help" do
       assert CLI.parse_args(["decode"]) == :help
     end
+
+    test "parses '--version'" do
+      assert CLI.parse_args(["--version"]) == :version
+    end
+
+    test "parses '-V'" do
+      assert CLI.parse_args(["-V"]) == :version
+    end
+  end
+
+  describe "version/0" do
+    test "returns a semver string" do
+      version = CLI.version()
+      assert Regex.match?(~r/^\d+\.\d+\.\d+/, version)
+    end
   end
 end

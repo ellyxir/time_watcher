@@ -15,6 +15,7 @@ defmodule TimeWatcher.CLI do
            | {:commit, String.t()}
            | {:reset, String.t() | :all}
            | {:decode, String.t(), String.t()}
+           | :version
            | :help
            | {:error, String.t()}
 
@@ -81,8 +82,21 @@ defmodule TimeWatcher.CLI do
     {:decode, repo_path, date}
   end
 
+  def parse_args(["--version"]) do
+    :version
+  end
+
+  def parse_args(["-V"]) do
+    :version
+  end
+
   def parse_args(_) do
     :help
+  end
+
+  @spec version() :: String.t()
+  def version do
+    Application.spec(:time_watcher, :vsn) |> to_string()
   end
 
   @spec parse_report_args([String.t()]) ::
@@ -312,6 +326,10 @@ defmodule TimeWatcher.CLI do
 
   defp run({:decode, repo_path, date}) do
     run_decode(repo_path, date)
+  end
+
+  defp run(:version) do
+    IO.puts("tw #{version()}")
   end
 
   defp run(:help) do
