@@ -54,7 +54,14 @@ defmodule TimeWatcher.DaemonTest do
       # In test env without epmd, this returns an error.
       # With epmd running, it blocks (calls Process.sleep(:infinity)).
       # We use a task with timeout to handle both cases.
-      task = Task.async(fn -> Daemon.start_daemon(dirs: ["/tmp/test"]) end)
+      test_dir =
+        Path.join(System.tmp_dir!(), "time_watcher_daemon_test_#{:rand.uniform(100_000)}")
+
+      File.mkdir_p!(test_dir)
+
+      on_exit(fn -> File.rm_rf(test_dir) end)
+
+      task = Task.async(fn -> Daemon.start_daemon(dirs: [test_dir]) end)
 
       case Task.yield(task, 1000) do
         {:ok, result} ->

@@ -108,6 +108,14 @@ defmodule TimeWatcher.WatcherTest do
 
       GenServer.stop(pid)
     end
+
+    test "returns error when directory does not exist", %{data_dir: data_dir} do
+      {:ok, pid} = Watcher.start_link(dirs: [], data_dir: data_dir)
+
+      assert {:error, :directory_not_found} = Watcher.add_dir(pid, "/nonexistent/path/12345")
+
+      GenServer.stop(pid)
+    end
   end
 
   describe "list_dirs/1" do
@@ -167,6 +175,15 @@ defmodule TimeWatcher.WatcherTest do
       paths = Enum.map(dirs, & &1.path)
       assert Path.expand(watch_dir) in paths
       refute Path.expand(data_dir) in paths
+
+      GenServer.stop(pid)
+    end
+
+    test "skips non-existent directories on init without crashing", %{data_dir: data_dir} do
+      {:ok, pid} =
+        Watcher.start_link(dirs: ["/nonexistent/path/12345"], data_dir: data_dir)
+
+      assert Watcher.list_dirs(pid) == []
 
       GenServer.stop(pid)
     end

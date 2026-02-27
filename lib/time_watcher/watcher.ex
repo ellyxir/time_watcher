@@ -33,7 +33,12 @@ defmodule TimeWatcher.Watcher do
   end
 
   @spec add_dir(GenServer.server(), String.t()) ::
-          :ok | {:error, :already_watching | :would_cause_loop}
+          :ok
+          | {:error,
+             :already_watching
+             | :would_cause_loop
+             | :directory_not_found
+             | :filesystem_backend_unavailable}
   def add_dir(server, dir) do
     GenServer.call(server, {:add_dir, dir})
   end
@@ -75,16 +80,15 @@ defmodule TimeWatcher.Watcher do
       )
     end
 
-    dir_repo_map =
-      Map.new(safe_dirs, fn expanded ->
-        {expanded, detect_repo(expanded)}
+    # Start file watchers, tracking which directories successfully started
+    {watcher_pids, active_dirs} =
+      Enum.reduce(safe_dirs, {%{}, []}, fn expanded, acc ->
+        maybe_start_watcher(expanded, acc)
       end)
 
-    watcher_pids =
-      Map.new(safe_dirs, fn expanded ->
-        {:ok, pid} = FileSystem.start_link(dirs: [expanded])
-        FileSystem.subscribe(pid)
-        {expanded, pid}
+    dir_repo_map =
+      Map.new(active_dirs, fn expanded ->
+        {expanded, detect_repo(expanded)}
       end)
 
     if verbose do
@@ -109,28 +113,17 @@ defmodule TimeWatcher.Watcher do
     data_dir = Path.expand(state.data_dir)
 
     cond do
-      would_cause_loop?(expanded, data_dir) ->
-        {:reply, {:error, :would_cause_loop}, state}
-
       Map.has_key?(state.dir_repo_map, expanded) ->
         {:reply, {:error, :already_watching}, state}
 
+      not File.dir?(expanded) ->
+        {:reply, {:error, :directory_not_found}, state}
+
+      would_cause_loop?(expanded, data_dir) ->
+        {:reply, {:error, :would_cause_loop}, state}
+
       true ->
-        {:ok, pid} = FileSystem.start_link(dirs: [expanded])
-        FileSystem.subscribe(pid)
-        repo = detect_repo(expanded)
-
-        if state.verbose do
-          IO.puts("Added: #{repo}")
-        end
-
-        new_state = %{
-          state
-          | dir_repo_map: Map.put(state.dir_repo_map, expanded, repo),
-            watcher_pids: Map.put(state.watcher_pids, expanded, pid)
-        }
-
-        {:reply, :ok, new_state}
+        start_watcher_for_dir(expanded, state)
     end
   end
 
@@ -205,6 +198,59 @@ defmodule TimeWatcher.Watcher do
     end)
 
     :ok
+  end
+
+  defp start_watcher_for_dir(expanded, state) do
+    case FileSystem.start_link(dirs: [expanded]) do
+      {:ok, pid} ->
+        FileSystem.subscribe(pid)
+        repo = detect_repo(expanded)
+        if state.verbose, do: IO.puts("Added: #{repo}")
+
+        new_state = %{
+          state
+          | dir_repo_map: Map.put(state.dir_repo_map, expanded, repo),
+            watcher_pids: Map.put(state.watcher_pids, expanded, pid)
+        }
+
+        {:reply, :ok, new_state}
+
+      :ignore ->
+        {:reply, {:error, :filesystem_backend_unavailable}, state}
+
+      {:error, reason} ->
+        Logger.error("Failed to start file watcher for #{expanded}: #{inspect(reason)}")
+        {:reply, {:error, :filesystem_backend_unavailable}, state}
+    end
+  end
+
+  defp maybe_start_watcher(expanded, {pids, dirs}) do
+    if File.dir?(expanded) do
+      start_watcher_process(expanded, {pids, dirs})
+    else
+      Logger.warning("Directory #{expanded} does not exist, skipping")
+      {pids, dirs}
+    end
+  end
+
+  defp start_watcher_process(expanded, {pids, dirs}) do
+    case FileSystem.start_link(dirs: [expanded]) do
+      {:ok, pid} ->
+        FileSystem.subscribe(pid)
+        {Map.put(pids, expanded, pid), [expanded | dirs]}
+
+      :ignore ->
+        Logger.warning(
+          "FileSystem backend not available for #{expanded}. " <>
+            "Install inotify-tools (Linux) or ensure fswatch is available (macOS)."
+        )
+
+        {pids, dirs}
+
+      {:error, reason} ->
+        Logger.error("Failed to start file watcher for #{expanded}: #{inspect(reason)}")
+        {pids, dirs}
+    end
   end
 
   defp debounced?(path, now, state) do
