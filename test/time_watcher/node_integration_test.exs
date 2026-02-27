@@ -106,26 +106,22 @@ defmodule TimeWatcher.NodeIntegrationTest do
   end
 
   describe "distribution startup" do
+    @tag :distributed
     test "can start a node with daemon name", %{test_id: _test_id} do
       # Use a unique name to avoid conflicts
       test_node = :"tw_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      case Elixir.Node.start(test_node, :shortnames) do
-        {:ok, _pid} ->
-          Elixir.Node.set_cookie(cookie)
+      {:ok, _pid} = Elixir.Node.start(test_node, :shortnames)
+      Elixir.Node.set_cookie(cookie)
 
-          assert Elixir.Node.alive?()
-          assert Elixir.Node.self() == test_node
+      assert Elixir.Node.alive?()
+      assert Elixir.Node.self() == test_node
 
-          Elixir.Node.stop()
-
-        {:error, reason} ->
-          # Distribution may not be available in all test environments
-          IO.puts("Skipping distribution test: #{inspect(reason)}")
-      end
+      Elixir.Node.stop()
     end
 
+    @tag :distributed
     test "cookie can be set on started node" do
       node1 = :"tw_test_a_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
@@ -133,38 +129,28 @@ defmodule TimeWatcher.NodeIntegrationTest do
       # Test that cookie is consistently available and can be set
       assert is_atom(cookie)
 
-      # Verify the cookie would work by checking it's set correctly
-      case Elixir.Node.start(node1, :shortnames) do
-        {:ok, _} ->
-          Elixir.Node.set_cookie(cookie)
-          assert Elixir.Node.get_cookie() == cookie
-          Elixir.Node.stop()
-
-        {:error, _} ->
-          :ok
-      end
+      {:ok, _} = Elixir.Node.start(node1, :shortnames)
+      Elixir.Node.set_cookie(cookie)
+      assert Elixir.Node.get_cookie() == cookie
+      Elixir.Node.stop()
     end
   end
 
   describe "node ping" do
+    @tag :distributed
     test "ping returns :pang for non-existent node" do
       # Start distribution so we can ping
       test_node = :"tw_ping_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      case Elixir.Node.start(test_node, :shortnames) do
-        {:ok, _} ->
-          Elixir.Node.set_cookie(cookie)
+      {:ok, _} = Elixir.Node.start(test_node, :shortnames)
+      Elixir.Node.set_cookie(cookie)
 
-          # Non-existent node should return :pang
-          result = Elixir.Node.ping(:nonexistent_node@localhost)
-          assert result == :pang
+      # Non-existent node should return :pang
+      result = Elixir.Node.ping(:nonexistent_node@localhost)
+      assert result == :pang
 
-          Elixir.Node.stop()
-
-        {:error, _} ->
-          :ok
-      end
+      Elixir.Node.stop()
     end
   end
 
@@ -177,33 +163,29 @@ defmodule TimeWatcher.NodeIntegrationTest do
       assert exit_code == 0 or output =~ "epmd: Cannot connect"
     end
 
+    @tag :distributed
     test "started node appears in epmd names" do
       test_node = :"tw_epmd_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      case Elixir.Node.start(test_node, :shortnames) do
-        {:ok, _} ->
-          Elixir.Node.set_cookie(cookie)
+      {:ok, _} = Elixir.Node.start(test_node, :shortnames)
+      Elixir.Node.set_cookie(cookie)
 
-          # Give epmd time to register
-          Process.sleep(100)
+      # Give epmd time to register
+      Process.sleep(100)
 
-          {output, 0} = System.cmd("epmd", ["-names"], stderr_to_stdout: true)
+      {output, 0} = System.cmd("epmd", ["-names"], stderr_to_stdout: true)
 
-          # Our node name (without @localhost) should appear
-          node_short_name =
-            test_node
-            |> Atom.to_string()
-            |> String.split("@")
-            |> hd()
+      # Our node name (without @localhost) should appear
+      node_short_name =
+        test_node
+        |> Atom.to_string()
+        |> String.split("@")
+        |> hd()
 
-          assert output =~ node_short_name
+      assert output =~ node_short_name
 
-          Elixir.Node.stop()
-
-        {:error, _} ->
-          :ok
-      end
+      Elixir.Node.stop()
     end
   end
 end

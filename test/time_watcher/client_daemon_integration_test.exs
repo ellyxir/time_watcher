@@ -115,6 +115,7 @@ defmodule TimeWatcher.ClientDaemonIntegrationTest do
 
   describe "distributed communication" do
     @tag timeout: @test_timeout
+    @tag :distributed
     test "client can communicate with daemon via distribution", %{
       data_dir: data_dir,
       watch_dir: watch_dir,
@@ -124,41 +125,35 @@ defmodule TimeWatcher.ClientDaemonIntegrationTest do
       daemon_node = :"tw_test_daemon_#{test_id}@localhost"
       cookie = Node.ensure_cookie()
 
-      case Elixir.Node.start(daemon_node, :shortnames) do
-        {:ok, _} ->
-          Elixir.Node.set_cookie(cookie)
+      {:ok, _} = Elixir.Node.start(daemon_node, :shortnames)
+      Elixir.Node.set_cookie(cookie)
 
-          # Start watcher on this node (simulating daemon)
-          {:ok, _pid} =
-            Watcher.start_link(
-              dirs: [watch_dir],
-              data_dir: data_dir,
-              name: Watcher
-            )
+      # Start watcher on this node (simulating daemon)
+      {:ok, _pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          name: Watcher
+        )
 
-          # Verify we can call the watcher via the registered name
-          dirs = Watcher.list_dirs(Watcher)
-          assert length(dirs) == 1
-          assert hd(dirs).path == Path.expand(watch_dir)
+      # Verify we can call the watcher via the registered name
+      dirs = Watcher.list_dirs(Watcher)
+      assert length(dirs) == 1
+      assert hd(dirs).path == Path.expand(watch_dir)
 
-          # Add another directory
-          new_dir = Path.join(System.tmp_dir!(), "tw_new_#{test_id}")
-          File.mkdir_p!(new_dir)
-          on_exit(fn -> File.rm_rf!(new_dir) end)
+      # Add another directory
+      new_dir = Path.join(System.tmp_dir!(), "tw_new_#{test_id}")
+      File.mkdir_p!(new_dir)
+      on_exit(fn -> File.rm_rf!(new_dir) end)
 
-          assert :ok = Watcher.add_dir(Watcher, new_dir)
-          assert length(Watcher.list_dirs(Watcher)) == 2
+      assert :ok = Watcher.add_dir(Watcher, new_dir)
+      assert length(Watcher.list_dirs(Watcher)) == 2
 
-          # Remove a directory
-          assert :ok = Watcher.remove_dir(Watcher, watch_dir)
-          assert length(Watcher.list_dirs(Watcher)) == 1
+      # Remove a directory
+      assert :ok = Watcher.remove_dir(Watcher, watch_dir)
+      assert length(Watcher.list_dirs(Watcher)) == 1
 
-          Elixir.Node.stop()
-
-        {:error, reason} ->
-          # Skip test if distribution can't be started
-          IO.puts("Skipping distributed test: #{inspect(reason)}")
-      end
+      Elixir.Node.stop()
     end
   end
 
