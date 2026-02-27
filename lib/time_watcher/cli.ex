@@ -3,7 +3,7 @@ defmodule TimeWatcher.CLI do
   CLI entry point for the time watcher.
   """
 
-  alias TimeWatcher.{Client, Daemon, Report, Storage}
+  alias TimeWatcher.{Client, Daemon, Decoder, Report, Storage}
 
   @typep command ::
            {:report, String.t() | :multi_day | :date_range, keyword()}
@@ -14,6 +14,7 @@ defmodule TimeWatcher.CLI do
            | :commit
            | {:commit, String.t()}
            | {:reset, String.t() | :all}
+           | {:decode, String.t(), String.t()}
            | :help
            | {:error, String.t()}
 
@@ -70,6 +71,14 @@ defmodule TimeWatcher.CLI do
 
   def parse_args(["reset", date]) do
     {:reset, date}
+  end
+
+  def parse_args(["decode", repo_path]) do
+    {:decode, repo_path, Date.to_string(Date.utc_today())}
+  end
+
+  def parse_args(["decode", repo_path, date]) do
+    {:decode, repo_path, date}
   end
 
   def parse_args(_) do
@@ -301,6 +310,10 @@ defmodule TimeWatcher.CLI do
     run_reset_date(date)
   end
 
+  defp run({:decode, repo_path, date}) do
+    run_decode(repo_path, date)
+  end
+
   defp run(:help) do
     IO.puts("""
     tw - git-based time tracker
@@ -314,6 +327,7 @@ defmodule TimeWatcher.CLI do
       tw commit [-m "message"]                Commit event data to git
       tw reset [YYYY-MM-DD]                   Delete events for date (default: today)
       tw reset --all                          Delete all events
+      tw decode <repo-path> [YYYY-MM-DD]      Show events with decoded file paths
 
     Options:
       -v, --verbose      Print events as they are recorded
@@ -353,6 +367,42 @@ defmodule TimeWatcher.CLI do
       {:ok, 0} -> IO.puts("No events found")
       {:error, reason} -> IO.puts("Failed to stage deletions: #{inspect(reason)}")
     end
+  end
+
+  defp run_decode(repo_path, date) do
+    expanded_path = Path.expand(repo_path)
+    repo_name = Path.basename(expanded_path)
+
+    events =
+      date
+      |> Storage.load_events()
+      |> Enum.filter(&(&1.repo == repo_name))
+
+    if events == [] do
+      IO.puts("No events found for #{repo_name} on #{date}")
+    else
+      hash_map = Decoder.build_hash_map(expanded_path)
+      decoded_events = Decoder.decode_events(events, hash_map)
+
+      IO.puts("Events for #{repo_name} on #{date}:\n")
+
+      Enum.each(decoded_events, fn event ->
+        time = event.timestamp |> DateTime.from_unix!() |> Calendar.strftime("%H:%M:%S")
+        path = format_decoded_path(event.decoded_path, expanded_path)
+        IO.puts("  [#{time}] #{event.event_type} #{path}")
+      end)
+
+      decoded_count = Enum.count(decoded_events, & &1.decoded_path)
+      total_count = length(decoded_events)
+
+      IO.puts("\nDecoded #{decoded_count}/#{total_count} file paths")
+    end
+  end
+
+  defp format_decoded_path(nil, _repo_path), do: "(unknown file)"
+
+  defp format_decoded_path(path, repo_path) do
+    Path.relative_to(path, repo_path)
   end
 
   @spec generate_date_list(pos_integer()) :: [String.t()]

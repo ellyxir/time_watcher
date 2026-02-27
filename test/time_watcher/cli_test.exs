@@ -257,5 +257,19 @@ defmodule TimeWatcher.CLITest do
     test "parses 'reset --all'" do
       assert CLI.parse_args(["reset", "--all"]) == {:reset, :all}
     end
+
+    test "parses 'decode' with repo path" do
+      assert CLI.parse_args(["decode", "/path/to/repo"]) ==
+               {:decode, "/path/to/repo", Date.to_string(Date.utc_today())}
+    end
+
+    test "parses 'decode' with repo path and date" do
+      assert CLI.parse_args(["decode", "/path/to/repo", "2026-02-25"]) ==
+               {:decode, "/path/to/repo", "2026-02-25"}
+    end
+
+    test "decode without repo path returns help" do
+      assert CLI.parse_args(["decode"]) == :help
+    end
   end
 end

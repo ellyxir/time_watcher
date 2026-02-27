@@ -6,13 +6,14 @@ defmodule TimeWatcher.Event do
   @valid_types [:created, :modified, :deleted]
 
   @enforce_keys [:timestamp, :repo, :hashed_path, :event_type]
-  defstruct [:timestamp, :repo, :hashed_path, :event_type]
+  defstruct [:timestamp, :repo, :hashed_path, :event_type, :decoded_path]
 
   @type t :: %__MODULE__{
           timestamp: integer(),
           repo: String.t(),
           hashed_path: String.t(),
-          event_type: :created | :modified | :deleted
+          event_type: :created | :modified | :deleted,
+          decoded_path: String.t() | nil
         }
 
   @spec new(String.t(), String.t(), :created | :modified | :deleted) :: t()

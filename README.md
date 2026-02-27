@@ -151,6 +151,32 @@ tw reset 2026-02-25
 tw commit -m "remove feb 25 data"
 ```
 
+### Decode file paths
+
+File paths are stored as hashes for privacy. On the same machine where events were recorded, you can decode them back to actual paths:
+
+```sh
+# Decode today's events for a repo
+tw decode ~/projects/my_app
+
+# Decode events for a specific date
+tw decode ~/projects/my_app 2026-02-25
+```
+
+Example output:
+
+```
+Events for my_app on 2026-02-25:
+
+  [09:12:34] modified lib/my_app/server.ex
+  [09:15:22] modified test/my_app/server_test.exs
+  [09:18:01] created lib/my_app/client.ex
+
+Decoded 3/3 file paths
+```
+
+This works by hashing all files in the repo directory and matching against the stored hashes. Files that have been deleted or renamed since the event won't be decoded.
+
 ## Data storage
 
 Events are stored as JSON files in `~/.local/share/time_watcher/`, organized by date:
