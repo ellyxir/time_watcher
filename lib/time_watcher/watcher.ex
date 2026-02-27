@@ -174,7 +174,7 @@ defmodule TimeWatcher.Watcher do
 
     if repo && !debounced?(path, now, state) do
       event = build_event(path, events, repo, now)
-      save_and_commit(event, path, state)
+      save_event(event, path, state)
       {:noreply, %{state | last_event_at: Map.put(state.last_event_at, path, now)}}
     else
       {:noreply, state}
@@ -212,11 +212,10 @@ defmodule TimeWatcher.Watcher do
     }
   end
 
-  defp save_and_commit(event, path, state) do
+  defp save_event(event, path, state) do
     case Storage.save_event(event, state.data_dir) do
       :ok ->
         if state.verbose, do: print_event(event, path)
-        fire_and_forget_commit(state.data_dir)
 
       {:error, reason} ->
         Logger.warning("Failed to save event: #{inspect(reason)}")
@@ -242,15 +241,6 @@ defmodule TimeWatcher.Watcher do
   defp print_event(event, path) do
     time = event.timestamp |> DateTime.from_unix!() |> Calendar.strftime("%H:%M:%S")
     IO.puts("[#{time}] #{event.event_type} #{event.repo}: #{Path.basename(path)}")
-  end
-
-  defp fire_and_forget_commit(data_dir) do
-    Task.start(fn ->
-      case Storage.git_commit("auto: event recorded", data_dir) do
-        :ok -> :ok
-        {:error, reason} -> Logger.warning("git commit failed: #{inspect(reason)}")
-      end
-    end)
   end
 
   defp would_cause_loop?(watch_dir, data_dir) do

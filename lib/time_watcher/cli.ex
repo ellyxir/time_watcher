@@ -11,6 +11,8 @@ defmodule TimeWatcher.CLI do
            | :stop
            | :list
            | {:remove, [String.t()]}
+           | :commit
+           | {:commit, String.t()}
            | :help
            | {:error, String.t()}
 
@@ -43,6 +45,18 @@ defmodule TimeWatcher.CLI do
 
   def parse_args(["remove" | dirs]) when dirs != [] do
     {:remove, dirs}
+  end
+
+  def parse_args(["commit"]) do
+    :commit
+  end
+
+  def parse_args(["commit", "-m", message]) do
+    {:commit, message}
+  end
+
+  def parse_args(["commit", "--message", message]) do
+    {:commit, message}
   end
 
   def parse_args(_) do
@@ -258,6 +272,14 @@ defmodule TimeWatcher.CLI do
     end)
   end
 
+  defp run(:commit) do
+    run_commit("sync activity data")
+  end
+
+  defp run({:commit, message}) do
+    run_commit(message)
+  end
+
   defp run(:help) do
     IO.puts("""
     tw - git-based time tracker
@@ -268,6 +290,7 @@ defmodule TimeWatcher.CLI do
       tw list                                 List watched directories
       tw remove <dir1 dir2 ...>               Remove directories from daemon
       tw report [YYYY-MM-DD] [options]        Show activity report (default: today)
+      tw commit [-m "message"]                Commit event data to git
 
     Options:
       -v, --verbose      Print events as they are recorded
@@ -277,6 +300,16 @@ defmodule TimeWatcher.CLI do
       --from DATE        Start of date range (requires --to)
       --to DATE          End of date range (requires --from)
     """)
+  end
+
+  defp run_commit(message) do
+    case Storage.git_commit(message) do
+      :ok ->
+        IO.puts("Committed: #{message}")
+
+      {:error, reason} ->
+        IO.puts("Commit failed: #{inspect(reason)}")
+    end
   end
 
   @spec generate_date_list(pos_integer()) :: [String.t()]

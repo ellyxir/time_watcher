@@ -157,11 +157,23 @@ File paths are SHA-256 hashed for privacy — the actual filenames you edit are 
 
 ### Syncing with git
 
-The data directory is automatically initialized as a git repo and commits are made as events are recorded. To sync across machines:
+The data directory can be version-controlled with git to sync across machines. Use `tw commit` to commit your event data:
+
+```sh
+# Commit current event data
+tw commit
+
+# Commit with a custom message
+tw commit -m "end of day sync"
+```
+
+To set up syncing:
 
 ```sh
 cd ~/.local/share/time_watcher
+git init  # if not already a repo
 git remote add origin <your-private-repo>
+tw commit
 git push -u origin main
 ```
 

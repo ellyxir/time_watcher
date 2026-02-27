@@ -229,5 +229,21 @@ defmodule TimeWatcher.CLITest do
     test "empty args returns help" do
       assert CLI.parse_args([]) == :help
     end
+
+    test "parses 'commit'" do
+      assert CLI.parse_args(["commit"]) == :commit
+    end
+
+    test "parses 'commit' with custom message" do
+      assert CLI.parse_args(["commit", "-m", "my message"]) == {:commit, "my message"}
+    end
+
+    test "parses 'commit' with --message flag" do
+      assert CLI.parse_args(["commit", "--message", "my message"]) == {:commit, "my message"}
+    end
+
+    test "commit with -m but no message returns help" do
+      assert CLI.parse_args(["commit", "-m"]) == :help
+    end
   end
 end
