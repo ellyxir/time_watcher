@@ -10,6 +10,7 @@ jobs:
     runs-on: codeberg-small
     env:
       MIX_ENV: test
+      ImageOS: ubuntu24
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - uses: https://github.com/erlef/setup-beam@v1
@@ -32,6 +33,7 @@ jobs:
     runs-on: codeberg-medium
     env:
       MIX_ENV: test
+      ImageOS: ubuntu24
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - uses: https://github.com/erlef/setup-beam@v1
