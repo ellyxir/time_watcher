@@ -34,7 +34,7 @@ defmodule TimeWatcher.CLI do
 
   def parse_args(["watch" | rest]) do
     {dirs, opts} = parse_watch_args(rest)
-    dirs = if dirs == [], do: ["."], else: dirs
+    dirs = if dirs == [], do: default_dirs(), else: dirs
     {:watch, dirs, opts}
   end
 
@@ -205,6 +205,15 @@ defmodule TimeWatcher.CLI do
       "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
       dir, {dirs, opts} -> {dirs ++ [dir], opts}
     end)
+  end
+
+  @spec default_dirs() :: [String.t()]
+  defp default_dirs do
+    case Application.get_env(:time_watcher, :dirs) do
+      nil -> ["."]
+      [] -> ["."]
+      dirs when is_list(dirs) -> dirs
+    end
   end
 
   defp run({:error, message}) do

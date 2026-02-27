@@ -49,11 +49,20 @@ defmodule TimeWatcher.Application do
             dir, {dirs, verbose} -> {dirs ++ [dir], verbose}
           end)
 
-        dirs = if dirs == [], do: ["."], else: dirs
+        dirs = if dirs == [], do: default_dirs(), else: dirs
         {dirs, verbose}
 
       _ ->
-        {["."], false}
+        {default_dirs(), false}
+    end
+  end
+
+  @spec default_dirs() :: [String.t()]
+  defp default_dirs do
+    case Application.get_env(:time_watcher, :dirs) do
+      nil -> ["."]
+      [] -> ["."]
+      dirs when is_list(dirs) -> dirs
     end
   end
 
