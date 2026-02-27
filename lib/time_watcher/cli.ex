@@ -155,10 +155,25 @@ defmodule TimeWatcher.CLI do
     has_to = Keyword.has_key?(opts, :to)
     has_days = Keyword.has_key?(opts, :days)
 
+    # Apply config cooldown if no CLI cooldown was provided
+    opts = apply_config_cooldown(opts)
+
     cond do
       has_from or has_to -> validate_date_range_args(date, opts, has_from, has_to, has_days)
       has_days -> validate_days_args(date, opts)
       true -> {date || Date.to_string(Date.utc_today()), opts}
+    end
+  end
+
+  @spec apply_config_cooldown(keyword()) :: keyword()
+  defp apply_config_cooldown(opts) do
+    if Keyword.has_key?(opts, :cooldown) do
+      opts
+    else
+      case Application.get_env(:time_watcher, :cooldown) do
+        nil -> opts
+        cooldown when is_integer(cooldown) -> [{:cooldown, cooldown} | opts]
+      end
     end
   end
 
@@ -200,11 +215,22 @@ defmodule TimeWatcher.CLI do
 
   @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
   defp parse_watch_args(args) do
-    Enum.reduce(args, {[], []}, fn
-      "-v", {dirs, opts} -> {dirs, [:verbose | opts]}
-      "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
-      dir, {dirs, opts} -> {dirs ++ [dir], opts}
-    end)
+    {dirs, opts, has_verbose_flag} =
+      Enum.reduce(args, {[], [], false}, fn
+        "-v", {dirs, opts, _} -> {dirs, [:verbose | opts], true}
+        "--verbose", {dirs, opts, _} -> {dirs, [:verbose | opts], true}
+        dir, {dirs, opts, has_flag} -> {dirs ++ [dir], opts, has_flag}
+      end)
+
+    # Apply config verbose if no CLI flag was given
+    opts =
+      cond do
+        has_verbose_flag -> opts
+        Application.get_env(:time_watcher, :verbose, false) -> [:verbose | opts]
+        true -> opts
+      end
+
+    {dirs, opts}
   end
 
   @spec default_dirs() :: [String.t()]

@@ -42,18 +42,26 @@ defmodule TimeWatcher.Application do
 
     case args do
       ["watch" | rest] ->
-        {dirs, verbose} =
-          Enum.reduce(rest, {[], false}, fn
-            "-v", {dirs, _} -> {dirs, true}
-            "--verbose", {dirs, _} -> {dirs, true}
-            dir, {dirs, verbose} -> {dirs ++ [dir], verbose}
+        {dirs, verbose, has_verbose_flag} =
+          Enum.reduce(rest, {[], false, false}, fn
+            "-v", {dirs, _, _} -> {dirs, true, true}
+            "--verbose", {dirs, _, _} -> {dirs, true, true}
+            dir, {dirs, verbose, has_flag} -> {dirs ++ [dir], verbose, has_flag}
           end)
+
+        # Apply config verbose if no CLI flag was given
+        verbose =
+          if has_verbose_flag do
+            verbose
+          else
+            Application.get_env(:time_watcher, :verbose, false)
+          end
 
         dirs = if dirs == [], do: default_dirs(), else: dirs
         {dirs, verbose}
 
       _ ->
-        {default_dirs(), false}
+        {default_dirs(), Application.get_env(:time_watcher, :verbose, false)}
     end
   end
 

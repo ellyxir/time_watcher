@@ -38,4 +38,100 @@ defmodule TimeWatcher.ConfigTest do
       assert CLI.parse_args(["watch", "-v"]) == {:watch, ["~/projects/foo"], [:verbose]}
     end
   end
+
+  describe "parse_args/1 with config verbose" do
+    setup do
+      original_verbose = Application.get_env(:time_watcher, :verbose)
+      original_dirs = Application.get_env(:time_watcher, :dirs)
+
+      on_exit(fn ->
+        Application.put_env(:time_watcher, :verbose, original_verbose)
+        Application.put_env(:time_watcher, :dirs, original_dirs)
+      end)
+
+      :ok
+    end
+
+    test "watch uses verbose from config when no -v flag" do
+      Application.put_env(:time_watcher, :verbose, true)
+      Application.delete_env(:time_watcher, :dirs)
+      assert CLI.parse_args(["watch"]) == {:watch, ["."], [:verbose]}
+    end
+
+    test "watch without -v and config verbose: false has no verbose" do
+      Application.put_env(:time_watcher, :verbose, false)
+      Application.delete_env(:time_watcher, :dirs)
+      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+    end
+
+    test "watch -v flag overrides config verbose: false" do
+      Application.put_env(:time_watcher, :verbose, false)
+      Application.delete_env(:time_watcher, :dirs)
+      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+    end
+
+    test "watch -v flag with config verbose: true still verbose" do
+      Application.put_env(:time_watcher, :verbose, true)
+      Application.delete_env(:time_watcher, :dirs)
+      assert CLI.parse_args(["watch", "-v"]) == {:watch, ["."], [:verbose]}
+    end
+
+    test "watch with no verbose config defaults to not verbose" do
+      Application.delete_env(:time_watcher, :verbose)
+      Application.delete_env(:time_watcher, :dirs)
+      assert CLI.parse_args(["watch"]) == {:watch, ["."], []}
+    end
+  end
+
+  describe "parse_args/1 with config cooldown" do
+    setup do
+      original_cooldown = Application.get_env(:time_watcher, :cooldown)
+
+      on_exit(fn ->
+        Application.put_env(:time_watcher, :cooldown, original_cooldown)
+      end)
+
+      :ok
+    end
+
+    test "report uses cooldown from config when no --cooldown flag" do
+      Application.put_env(:time_watcher, :cooldown, 10)
+
+      assert CLI.parse_args(["report"]) ==
+               {:report, Date.to_string(Date.utc_today()), [cooldown: 10]}
+    end
+
+    test "report with date uses cooldown from config" do
+      Application.put_env(:time_watcher, :cooldown, 15)
+      assert CLI.parse_args(["report", "2026-02-25"]) == {:report, "2026-02-25", [cooldown: 15]}
+    end
+
+    test "report --cooldown flag overrides config cooldown" do
+      Application.put_env(:time_watcher, :cooldown, 10)
+
+      assert CLI.parse_args(["report", "--cooldown", "20"]) ==
+               {:report, Date.to_string(Date.utc_today()), [cooldown: 20]}
+    end
+
+    test "report with no cooldown config has no cooldown opt" do
+      Application.delete_env(:time_watcher, :cooldown)
+      assert CLI.parse_args(["report"]) == {:report, Date.to_string(Date.utc_today()), []}
+    end
+
+    test "report --days uses cooldown from config" do
+      Application.put_env(:time_watcher, :cooldown, 10)
+
+      assert CLI.parse_args(["report", "--days", "7"]) ==
+               {:report, :multi_day, [cooldown: 10, days: 7]}
+    end
+
+    test "report --from/--to uses cooldown from config" do
+      Application.put_env(:time_watcher, :cooldown, 10)
+
+      assert {:report, :date_range, opts} =
+               CLI.parse_args(["report", "--from", "2026-02-20", "--to", "2026-02-27"])
+
+      assert Keyword.get(opts, :cooldown) == 10
+    end
+  end
 end
