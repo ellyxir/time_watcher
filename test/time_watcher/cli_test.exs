@@ -3,11 +3,18 @@ defmodule TimeWatcher.CLITest do
 
   alias TimeWatcher.CLI
 
-  # Clear config cooldown for report tests since user may have it set
+  # Clear config for tests since user may have it set
   setup do
     original_cooldown = Application.get_env(:time_watcher, :cooldown)
+    original_verbose = Application.get_env(:time_watcher, :verbose)
     Application.delete_env(:time_watcher, :cooldown)
-    on_exit(fn -> Application.put_env(:time_watcher, :cooldown, original_cooldown) end)
+    Application.delete_env(:time_watcher, :verbose)
+
+    on_exit(fn ->
+      Application.put_env(:time_watcher, :cooldown, original_cooldown)
+      Application.put_env(:time_watcher, :verbose, original_verbose)
+    end)
+
     :ok
   end
 
