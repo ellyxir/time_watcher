@@ -5,11 +5,26 @@ defmodule TimeWatcher.CLITest do
 
   describe "parse_args/1" do
     test "parses 'report' with date" do
-      assert CLI.parse_args(["report", "2026-02-25"]) == {:report, "2026-02-25"}
+      assert CLI.parse_args(["report", "2026-02-25"]) == {:report, "2026-02-25", []}
     end
 
     test "parses 'report' without date defaults to today" do
-      assert CLI.parse_args(["report"]) == {:report, Date.to_string(Date.utc_today())}
+      assert CLI.parse_args(["report"]) == {:report, Date.to_string(Date.utc_today()), []}
+    end
+
+    test "parses 'report' with --cooldown option" do
+      assert CLI.parse_args(["report", "--cooldown", "15"]) ==
+               {:report, Date.to_string(Date.utc_today()), [cooldown: 15]}
+    end
+
+    test "parses 'report' with date and --cooldown option" do
+      assert CLI.parse_args(["report", "2026-02-25", "--cooldown", "20"]) ==
+               {:report, "2026-02-25", [cooldown: 20]}
+    end
+
+    test "parses 'report' with --cooldown before date" do
+      assert CLI.parse_args(["report", "--cooldown", "10", "2026-02-25"]) ==
+               {:report, "2026-02-25", [cooldown: 10]}
     end
 
     test "parses 'watch' with directories" do

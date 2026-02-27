@@ -6,7 +6,7 @@ defmodule TimeWatcher.CLI do
   alias TimeWatcher.{Client, Daemon, Report, Storage}
 
   @typep command ::
-           {:report, String.t()}
+           {:report, String.t(), keyword()}
            | {:watch, [String.t()], [atom()]}
            | {:add, [String.t()]}
            | :list
@@ -19,27 +19,15 @@ defmodule TimeWatcher.CLI do
   end
 
   @spec parse_args([String.t()]) :: command()
-  def parse_args(["report", date]) do
-    {:report, date}
-  end
-
-  def parse_args(["report"]) do
-    {:report, Date.to_string(Date.utc_today())}
+  def parse_args(["report" | rest]) do
+    {date, opts} = parse_report_args(rest)
+    {:report, date, opts}
   end
 
   def parse_args(["watch" | rest]) do
     {dirs, opts} = parse_watch_args(rest)
     dirs = if dirs == [], do: ["."], else: dirs
     {:watch, dirs, opts}
-  end
-
-  @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
-  defp parse_watch_args(args) do
-    Enum.reduce(args, {[], []}, fn
-      "-v", {dirs, opts} -> {dirs, [:verbose | opts]}
-      "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
-      dir, {dirs, opts} -> {dirs ++ [dir], opts}
-    end)
   end
 
   def parse_args(["add" | dirs]) when dirs != [] do
@@ -58,9 +46,41 @@ defmodule TimeWatcher.CLI do
     :help
   end
 
-  defp run({:report, date}) do
+  @spec parse_report_args([String.t()]) :: {String.t(), keyword()}
+  defp parse_report_args(args) do
+    {date, opts} =
+      Enum.reduce(args, {nil, []}, fn
+        "--cooldown", {date, opts} ->
+          {date, [{:pending_cooldown, true} | opts]}
+
+        arg, {date, [{:pending_cooldown, true} | rest]} ->
+          {date, [{:cooldown, String.to_integer(arg)} | rest]}
+
+        arg, {nil, opts} ->
+          {arg, opts}
+
+        _arg, acc ->
+          acc
+      end)
+
+    date = date || Date.to_string(Date.utc_today())
+    opts = Keyword.delete(opts, :pending_cooldown)
+    {date, opts}
+  end
+
+  @spec parse_watch_args([String.t()]) :: {[String.t()], [atom()]}
+  defp parse_watch_args(args) do
+    Enum.reduce(args, {[], []}, fn
+      "-v", {dirs, opts} -> {dirs, [:verbose | opts]}
+      "--verbose", {dirs, opts} -> {dirs, [:verbose | opts]}
+      dir, {dirs, opts} -> {dirs ++ [dir], opts}
+    end)
+  end
+
+  defp run({:report, date, opts}) do
     events = Storage.load_events(date)
-    stretches = Report.stretches(events)
+    report_opts = build_report_opts(opts)
+    stretches = Report.stretches(events, report_opts)
 
     if stretches == [] do
       IO.puts("No activity recorded for #{date}")
@@ -77,6 +97,7 @@ defmodule TimeWatcher.CLI do
 
   defp run({:watch, dirs, opts}) do
     verbose = :verbose in opts
+
     case Daemon.start_daemon(dirs: dirs, verbose: verbose) do
       :ok ->
         :ok
@@ -142,15 +163,24 @@ defmodule TimeWatcher.CLI do
     tw - git-based time tracker
 
     Usage:
-      tw watch [-v] [dir1 dir2 ...]  Start daemon watching directories (default: .)
-      tw add <dir1 dir2 ...>         Add directories to running daemon
-      tw list                        List watched directories
-      tw remove <dir1 dir2 ...>      Remove directories from daemon
-      tw report [YYYY-MM-DD]         Show activity report (default: today)
+      tw watch [-v] [dir1 dir2 ...]           Start daemon watching directories (default: .)
+      tw add <dir1 dir2 ...>                  Add directories to running daemon
+      tw list                                 List watched directories
+      tw remove <dir1 dir2 ...>               Remove directories from daemon
+      tw report [YYYY-MM-DD] [--cooldown N]   Show activity report (default: today)
 
     Options:
-      -v, --verbose   Print events as they are recorded
+      -v, --verbose      Print events as they are recorded
+      --cooldown N       Minutes of inactivity to count as continuous (default: 5)
     """)
+  end
+
+  @spec build_report_opts(keyword()) :: keyword()
+  defp build_report_opts(opts) do
+    case Keyword.get(opts, :cooldown) do
+      nil -> []
+      minutes -> [window_minutes: minutes * 2]
+    end
   end
 
   defp print_dir(dir) do
