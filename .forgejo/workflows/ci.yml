@@ -14,6 +14,8 @@ jobs:
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - uses: https://github.com/erlef/setup-beam@v1
+        env:
+          ImageOS: ubuntu24
         with:
           elixir-version: '1.18.3'
           otp-version: '27.2.4'
@@ -37,6 +39,8 @@ jobs:
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - uses: https://github.com/erlef/setup-beam@v1
+        env:
+          ImageOS: ubuntu24
         with:
           elixir-version: '1.18.3'
           otp-version: '27.2.4'
