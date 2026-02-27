@@ -247,6 +247,42 @@ git push -u origin main
 
 On another machine, clone into the same path and TimeWatcher will pick it up.
 
+## Configuration file
+
+TimeWatcher can be configured via a config file at `~/.config/time_watcher/config.exs` (or `$XDG_CONFIG_HOME/time_watcher/config.exs` if set).
+
+### Available options
+
+- **dirs** — list of directories to watch by default
+- **verbose** — enable verbose event logging (requires `-v` flag to see output)
+- **cooldown** — default cooldown in minutes for reports
+
+### Example config
+
+```elixir
+import Config
+
+config :time_watcher,
+  dirs: ["~/projects/client_a", "~/projects/client_b"],
+  verbose: false,
+  cooldown: 10
+```
+
+### CLI override
+
+Command-line flags always override config values:
+
+```sh
+# Config has verbose: false, but -v overrides it
+tw watch -v
+
+# Config has cooldown: 10, but --cooldown overrides it
+tw report --cooldown 5
+
+# Config has dirs set, but explicit dirs override them
+tw watch ~/other/project
+```
+
 ## Development
 
 ```sh
