@@ -11,12 +11,15 @@ defmodule TimeWatcher.CLITest do
     Application.delete_env(:time_watcher, :verbose)
 
     on_exit(fn ->
-      Application.put_env(:time_watcher, :cooldown, original_cooldown)
-      Application.put_env(:time_watcher, :verbose, original_verbose)
+      restore_env(:cooldown, original_cooldown)
+      restore_env(:verbose, original_verbose)
     end)
 
     :ok
   end
+
+  defp restore_env(key, nil), do: Application.delete_env(:time_watcher, key)
+  defp restore_env(key, value), do: Application.put_env(:time_watcher, key, value)
 
   describe "parse_args/1" do
     test "parses 'report' with date" do
