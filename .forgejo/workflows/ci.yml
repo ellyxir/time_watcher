@@ -8,20 +8,16 @@ on:
 jobs:
   test:
     runs-on: codeberg-small
+    container:
+      image: ghcr.io/catthehacker/ubuntu:act-latest
     env:
       MIX_ENV: test
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
-
-      - name: Install Erlang/OTP and Elixir
-        run: |
-          curl -fsSL https://builds.hex.pm/builds/otp/ubuntu-24.04/OTP-27.2.4.tar.gz | tar -xz
-          mv OTP-27.2.4 /usr/local/lib/erlang
-          for bin in erl erlc escript epmd; do ln -sf /usr/local/lib/erlang/bin/$bin /usr/local/bin/$bin; done
-          curl -fsSL https://builds.hex.pm/builds/elixir/v1.18.3-otp-27.zip -o elixir.zip
-          unzip -q elixir.zip -d /usr/local/lib/elixir
-          for bin in elixir elixirc mix iex; do ln -sf /usr/local/lib/elixir/bin/$bin /usr/local/bin/$bin; done
-
+      - uses: https://codeberg.org/ellyxir/setup-beam@v1.19.2
+        with:
+          elixir-version: '1.18.3'
+          otp-version: '27.2.4'
       - uses: https://code.forgejo.org/actions/cache@v4
         with:
           path: |
@@ -29,7 +25,6 @@ jobs:
             _build
           key: mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: mix-
-
       - run: mix local.hex --force && mix local.rebar --force && mix deps.get
       - run: mix format --check-formatted
       - run: mix credo --strict
@@ -37,20 +32,16 @@ jobs:
 
   dialyzer:
     runs-on: codeberg-medium
+    container:
+      image: ghcr.io/catthehacker/ubuntu:act-latest
     env:
       MIX_ENV: test
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
-
-      - name: Install Erlang/OTP and Elixir
-        run: |
-          curl -fsSL https://builds.hex.pm/builds/otp/ubuntu-24.04/OTP-27.2.4.tar.gz | tar -xz
-          mv OTP-27.2.4 /usr/local/lib/erlang
-          for bin in erl erlc escript epmd; do ln -sf /usr/local/lib/erlang/bin/$bin /usr/local/bin/$bin; done
-          curl -fsSL https://builds.hex.pm/builds/elixir/v1.18.3-otp-27.zip -o elixir.zip
-          unzip -q elixir.zip -d /usr/local/lib/elixir
-          for bin in elixir elixirc mix iex; do ln -sf /usr/local/lib/elixir/bin/$bin /usr/local/bin/$bin; done
-
+      - uses: https://codeberg.org/ellyxir/setup-beam@v1.19.2
+        with:
+          elixir-version: '1.18.3'
+          otp-version: '27.2.4'
       - uses: https://code.forgejo.org/actions/cache@v4
         with:
           path: |
@@ -59,6 +50,5 @@ jobs:
             priv/plts
           key: dialyzer-${{ hashFiles('**/mix.lock') }}
           restore-keys: dialyzer-
-
       - run: mix local.hex --force && mix local.rebar --force && mix deps.get
       - run: mix dialyzer
