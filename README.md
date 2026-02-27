@@ -164,6 +164,11 @@ Events are stored as JSON files in `~/.local/share/time_watcher/`, organized by 
     ...
 ```
 
+Filenames follow the pattern `{timestamp}_{hostname}_{unique}.json`:
+- **timestamp** — Unix timestamp in seconds when the event occurred
+- **hostname** — machine name, for distinguishing events when syncing across machines
+- **unique** — incrementing integer to prevent collisions if multiple events occur in the same second
+
 Each event file contains:
 
 ```json
