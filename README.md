@@ -85,6 +85,9 @@ tw report 2026-02-25
 # Last 7 days
 tw report --days 7
 
+# Specific date range
+tw report --from 2026-02-20 --to 2026-02-27
+
 # Markdown format (for pasting into notes, PRs, etc.)
 tw report --md
 
@@ -93,11 +96,12 @@ tw report --cooldown 15
 
 # Combine options
 tw report --days 7 --md --cooldown 10
+tw report --from 2026-02-20 --to 2026-02-27 --md --cooldown 10
 ```
 
 The default cooldown is 5 minutes — if you stop editing for more than 5 minutes, it's treated as a break. Use `--cooldown` to adjust this threshold.
 
-The `--days N` flag shows activity for the last N days (including today). Days with no activity are silently skipped.
+The `--days N` flag shows activity for the last N days (including today). The `--from DATE --to DATE` flags let you specify an explicit date range. Days with no activity are silently skipped.
 
 Example output:
 

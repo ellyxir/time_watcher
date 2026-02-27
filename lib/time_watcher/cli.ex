@@ -6,7 +6,7 @@ defmodule TimeWatcher.CLI do
   alias TimeWatcher.{Client, Daemon, Report, Storage}
 
   @typep command ::
-           {:report, String.t() | :multi_day, keyword()}
+           {:report, String.t() | :multi_day | :date_range, keyword()}
            | {:watch, [String.t()], [atom()]}
            | :stop
            | :list
@@ -50,7 +50,7 @@ defmodule TimeWatcher.CLI do
   end
 
   @spec parse_report_args([String.t()]) ::
-          {String.t() | :multi_day, keyword()} | {:error, String.t()}
+          {String.t() | :multi_day | :date_range, keyword()} | {:error, String.t()}
   defp parse_report_args(args) do
     {date, opts} =
       Enum.reduce(args, {nil, []}, fn
@@ -66,6 +66,18 @@ defmodule TimeWatcher.CLI do
         arg, {date, [{:pending_days, true} | rest]} ->
           {date, [{:days, String.to_integer(arg)} | rest]}
 
+        "--from", {date, opts} ->
+          {date, [{:pending_from, true} | opts]}
+
+        arg, {date, [{:pending_from, true} | rest]} ->
+          {date, [{:from, arg} | rest]}
+
+        "--to", {date, opts} ->
+          {date, [{:pending_to, true} | opts]}
+
+        arg, {date, [{:pending_to, true} | rest]} ->
+          {date, [{:to, arg} | rest]}
+
         "--md", {date, opts} ->
           {date, [{:md, true} | opts]}
 
@@ -76,21 +88,63 @@ defmodule TimeWatcher.CLI do
           acc
       end)
 
-    opts = opts |> Keyword.delete(:pending_cooldown) |> Keyword.delete(:pending_days)
+    opts =
+      opts
+      |> Keyword.delete(:pending_cooldown)
+      |> Keyword.delete(:pending_days)
+      |> Keyword.delete(:pending_from)
+      |> Keyword.delete(:pending_to)
+
+    validate_report_args(date, opts)
+  end
+
+  @spec validate_report_args(String.t() | nil, keyword()) ::
+          {String.t() | :multi_day | :date_range, keyword()} | {:error, String.t()}
+  defp validate_report_args(date, opts) do
+    has_from = Keyword.has_key?(opts, :from)
+    has_to = Keyword.has_key?(opts, :to)
+    has_days = Keyword.has_key?(opts, :days)
 
     cond do
-      Keyword.has_key?(opts, :days) and date != nil ->
-        {:error, "--days cannot be combined with a date argument"}
+      has_from or has_to -> validate_date_range_args(date, opts, has_from, has_to, has_days)
+      has_days -> validate_days_args(date, opts)
+      true -> {date || Date.to_string(Date.utc_today()), opts}
+    end
+  end
 
-      Keyword.has_key?(opts, :days) and Keyword.get(opts, :days) <= 0 ->
-        {:error, "--days must be a positive integer"}
+  @spec validate_date_range_args(String.t() | nil, keyword(), boolean(), boolean(), boolean()) ::
+          {:date_range, keyword()} | {:error, String.t()}
+  defp validate_date_range_args(date, opts, has_from, has_to, has_days) do
+    cond do
+      has_from and not has_to -> {:error, "--from requires --to (and vice versa)"}
+      has_to and not has_from -> {:error, "--from requires --to (and vice versa)"}
+      has_days -> {:error, "--from/--to cannot be combined with --days"}
+      date != nil -> {:error, "--from/--to cannot be combined with a date argument"}
+      true -> validate_date_range_order(opts)
+    end
+  end
 
-      Keyword.has_key?(opts, :days) ->
-        {:multi_day, opts}
+  @spec validate_date_range_order(keyword()) :: {:date_range, keyword()} | {:error, String.t()}
+  defp validate_date_range_order(opts) do
+    from_str = Keyword.fetch!(opts, :from)
+    to_str = Keyword.fetch!(opts, :to)
+    from_date = Date.from_iso8601!(from_str)
+    to_date = Date.from_iso8601!(to_str)
 
-      true ->
-        date = date || Date.to_string(Date.utc_today())
-        {date, opts}
+    if Date.compare(from_date, to_date) == :gt do
+      {:error, "--from date must be before or equal to --to date"}
+    else
+      {:date_range, opts}
+    end
+  end
+
+  @spec validate_days_args(String.t() | nil, keyword()) ::
+          {:multi_day, keyword()} | {:error, String.t()}
+  defp validate_days_args(date, opts) do
+    cond do
+      date != nil -> {:error, "--days cannot be combined with a date argument"}
+      Keyword.get(opts, :days) <= 0 -> {:error, "--days must be a positive integer"}
+      true -> {:multi_day, opts}
     end
   end
 
@@ -110,6 +164,13 @@ defmodule TimeWatcher.CLI do
   defp run({:report, :multi_day, opts}) do
     days = Keyword.fetch!(opts, :days)
     dates = generate_date_list(days)
+    run_multi_day_report(dates, opts)
+  end
+
+  defp run({:report, :date_range, opts}) do
+    from_str = Keyword.fetch!(opts, :from)
+    to_str = Keyword.fetch!(opts, :to)
+    dates = generate_date_range(from_str, to_str)
     run_multi_day_report(dates, opts)
   end
 
@@ -213,6 +274,8 @@ defmodule TimeWatcher.CLI do
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --md               Output report in markdown format
       --days N           Show last N days of activity (including today)
+      --from DATE        Start of date range (requires --to)
+      --to DATE          End of date range (requires --from)
     """)
   end
 
@@ -222,6 +285,16 @@ defmodule TimeWatcher.CLI do
 
     (days - 1)..0//-1
     |> Enum.map(fn offset -> today |> Date.add(-offset) |> Date.to_string() end)
+  end
+
+  @spec generate_date_range(String.t(), String.t()) :: [String.t()]
+  defp generate_date_range(from_str, to_str) do
+    from_date = Date.from_iso8601!(from_str)
+    to_date = Date.from_iso8601!(to_str)
+    diff = Date.diff(to_date, from_date)
+
+    0..diff
+    |> Enum.map(fn offset -> from_date |> Date.add(offset) |> Date.to_string() end)
   end
 
   @spec run_multi_day_report([String.t()], keyword()) :: :ok

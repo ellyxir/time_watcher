@@ -321,6 +321,149 @@ defmodule TimeWatcher.CLIIntegrationTest do
     end
   end
 
+  describe "report --from/--to command" do
+    test "outputs date range activity", %{data_dir: data_dir} do
+      # Day 1: 2026-01-15 10:00 UTC
+      day1_time = 1_736_935_200
+      # Day 2: 2026-01-16 10:00 UTC (24 hours later)
+      day2_time = day1_time + 86_400
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event2 = %Event{
+        timestamp: day2_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day2_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2], [], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      assert output =~ "Activity for #{date2}"
+      assert output =~ "Day total:"
+      assert output =~ "Total (2 days):"
+    end
+
+    test "outputs markdown format with --from/--to and --md", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+      day2_time = day1_time + 86_400
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event2 = %Event{
+        timestamp: day2_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day2_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2], [md: true], data_dir)
+        end)
+
+      assert output =~ "## Activity for #{date1}"
+      assert output =~ "## Activity for #{date2}"
+      assert output =~ "| Time | Project | Duration |"
+      assert output =~ "**Day total:"
+      assert output =~ "**Total (2 days):"
+    end
+
+    test "skips days with no activity in date range", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+      # Skip day 2, add event on day 3
+      day3_time = day1_time + 86_400 * 2
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      event3 = %Event{
+        timestamp: day3_time,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event3, data_dir)
+
+      date1 = timestamp_to_date(day1_time)
+      date2 = timestamp_to_date(day1_time + 86_400)
+      date3 = timestamp_to_date(day3_time)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1, date2, date3], [], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      refute output =~ "Activity for #{date2}"
+      assert output =~ "Activity for #{date3}"
+      assert output =~ "Total (2 days):"
+    end
+
+    test "shows no activity when date range has no events", %{data_dir: data_dir} do
+      output =
+        capture_io(fn ->
+          run_multi_day_report(["2026-01-15", "2026-01-16", "2026-01-17"], [], data_dir)
+        end)
+
+      assert output =~ "No activity recorded for the selected period"
+    end
+
+    test "single day range (--from equals --to)", %{data_dir: data_dir} do
+      day1_time = 1_736_935_200
+      date1 = timestamp_to_date(day1_time)
+
+      event1 = %Event{
+        timestamp: day1_time,
+        repo: "my_app",
+        hashed_path: "abc",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+
+      output =
+        capture_io(fn ->
+          run_multi_day_report([date1], [], data_dir)
+        end)
+
+      assert output =~ "Activity for #{date1}"
+      assert output =~ "Total (1 days):"
+    end
+  end
+
   describe "help command" do
     test "outputs usage information" do
       output =

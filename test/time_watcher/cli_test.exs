@@ -82,6 +82,107 @@ defmodule TimeWatcher.CLITest do
                {:error, "--days must be a positive integer"}
     end
 
+    test "parses 'report' with --from and --to flags" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args(["report", "--from", "2026-02-20", "--to", "2026-02-27"])
+
+      assert Keyword.get(opts, :from) == "2026-02-20"
+      assert Keyword.get(opts, :to) == "2026-02-27"
+    end
+
+    test "parses 'report' with --from, --to, and --md flags" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args(["report", "--from", "2026-02-20", "--to", "2026-02-27", "--md"])
+
+      assert Keyword.get(opts, :from) == "2026-02-20"
+      assert Keyword.get(opts, :to) == "2026-02-27"
+      assert Keyword.get(opts, :md) == true
+    end
+
+    test "parses 'report' with --from, --to, and --cooldown flags" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args([
+                 "report",
+                 "--from",
+                 "2026-02-20",
+                 "--to",
+                 "2026-02-27",
+                 "--cooldown",
+                 "10"
+               ])
+
+      assert Keyword.get(opts, :from) == "2026-02-20"
+      assert Keyword.get(opts, :to) == "2026-02-27"
+      assert Keyword.get(opts, :cooldown) == 10
+    end
+
+    test "parses 'report' with --from, --to, --md, and --cooldown flags" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args([
+                 "report",
+                 "--from",
+                 "2026-02-20",
+                 "--to",
+                 "2026-02-27",
+                 "--md",
+                 "--cooldown",
+                 "15"
+               ])
+
+      assert Keyword.get(opts, :from) == "2026-02-20"
+      assert Keyword.get(opts, :to) == "2026-02-27"
+      assert Keyword.get(opts, :md) == true
+      assert Keyword.get(opts, :cooldown) == 15
+    end
+
+    test "report --from without --to returns error" do
+      assert CLI.parse_args(["report", "--from", "2026-02-20"]) ==
+               {:error, "--from requires --to (and vice versa)"}
+    end
+
+    test "report --to without --from returns error" do
+      assert CLI.parse_args(["report", "--to", "2026-02-27"]) ==
+               {:error, "--from requires --to (and vice versa)"}
+    end
+
+    test "report --from date after --to date returns error" do
+      assert CLI.parse_args(["report", "--from", "2026-02-27", "--to", "2026-02-20"]) ==
+               {:error, "--from date must be before or equal to --to date"}
+    end
+
+    test "report --from equals --to is valid (single day)" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args(["report", "--from", "2026-02-25", "--to", "2026-02-25"])
+
+      assert Keyword.get(opts, :from) == "2026-02-25"
+      assert Keyword.get(opts, :to) == "2026-02-25"
+    end
+
+    test "report --from/--to with --days returns error" do
+      assert CLI.parse_args([
+               "report",
+               "--from",
+               "2026-02-20",
+               "--to",
+               "2026-02-27",
+               "--days",
+               "7"
+             ]) ==
+               {:error, "--from/--to cannot be combined with --days"}
+    end
+
+    test "report --from/--to with date argument returns error" do
+      assert CLI.parse_args([
+               "report",
+               "--from",
+               "2026-02-20",
+               "--to",
+               "2026-02-27",
+               "2026-02-25"
+             ]) ==
+               {:error, "--from/--to cannot be combined with a date argument"}
+    end
+
     test "parses 'watch' with directories" do
       assert CLI.parse_args(["watch", "/tmp/dir1", "/tmp/dir2"]) ==
                {:watch, ["/tmp/dir1", "/tmp/dir2"], []}
