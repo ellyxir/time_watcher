@@ -14,6 +14,15 @@ Reports show stretches of activity by expanding each event into a 10-minute wind
 
 ## Install
 
+### Nix
+
+```sh
+git clone <repo-url> && cd time_watcher
+nix profile install .
+```
+
+### From source
+
 Requires Elixir 1.18+.
 
 ```sh
@@ -34,7 +43,7 @@ ln -s "$(pwd)/_build/prod/rel/time_watcher/bin/tw" ~/.local/bin/tw
 
 ## Usage
 
-### Watch a directory
+### Start the watcher daemon
 
 ```sh
 # Watch the current directory
@@ -44,7 +53,22 @@ tw watch
 tw watch ~/projects/app1 ~/projects/app2
 ```
 
-Leave this running in a terminal while you work. Press `Ctrl+C` to stop.
+Leave this running in a terminal (or background it) while you work.
+
+### Manage watched directories
+
+While the daemon is running, you can add or remove directories:
+
+```sh
+# List currently watched directories
+tw list
+
+# Add a directory to the running watcher
+tw add ~/projects/app3
+
+# Remove a directory from the watcher
+tw remove ~/projects/app1
+```
 
 ### View a report
 

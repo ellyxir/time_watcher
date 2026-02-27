@@ -21,3 +21,6 @@ time_watcher-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Nix build output
+/result

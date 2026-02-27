@@ -5,6 +5,13 @@ SELF=$(readlink "$0" || true)
 if [ -z "$SELF" ]; then SELF="$0"; fi
 RELEASE_ROOT="$(cd "$(dirname "$SELF")/.." && pwd -P)"
 
+# Ensure epmd is running for distributed Erlang
+ensure_epmd() {
+  if ! pgrep -x epmd > /dev/null 2>&1; then
+    "$RELEASE_ROOT/erts-"*/bin/epmd -daemon 2>/dev/null || epmd -daemon 2>/dev/null || true
+  fi
+}
+
 # Encode args as newline-delimited env var for Elixir to parse
 export TW_ARGV=""
 for arg in "$@"; do
@@ -16,4 +23,18 @@ $arg"
   fi
 done
 
-exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
+# Route 'watch' command to 'start' mode (daemon), others to 'eval' mode
+COMMAND="${1:-}"
+
+if [ "$COMMAND" = "watch" ]; then
+  # Start epmd and run as daemon using 'start' mode
+  ensure_epmd
+  exec "$RELEASE_ROOT/bin/time_watcher" start
+elif [ "$COMMAND" = "add" ] || [ "$COMMAND" = "list" ] || [ "$COMMAND" = "remove" ]; then
+  # Client commands need epmd for distribution
+  ensure_epmd
+  exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
+else
+  # Other commands (report, help) don't need distribution
+  exec "$RELEASE_ROOT/bin/time_watcher" eval 'System.get_env("TW_ARGV", "") |> String.split("\n", trim: true) |> TimeWatcher.CLI.main()'
+fi

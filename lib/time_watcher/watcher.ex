@@ -31,26 +31,51 @@ defmodule TimeWatcher.Watcher do
     end
   end
 
+  @spec add_dir(GenServer.server(), String.t()) :: :ok | {:error, :already_watching | :would_cause_loop}
+  def add_dir(server, dir) do
+    GenServer.call(server, {:add_dir, dir})
+  end
+
+  @spec list_dirs(GenServer.server()) :: [%{path: String.t(), repo: String.t()}]
+  def list_dirs(server) do
+    GenServer.call(server, :list_dirs)
+  end
+
+  @spec remove_dir(GenServer.server(), String.t()) :: :ok | {:error, :not_watching}
+  def remove_dir(server, dir) do
+    GenServer.call(server, {:remove_dir, dir})
+  end
+
   # Server callbacks
 
   @impl true
   def init(opts) do
     dirs = Keyword.fetch!(opts, :dirs)
     data_dir = Keyword.get(opts, :data_dir, Storage.data_dir())
+    expanded_data_dir = Path.expand(data_dir)
     debounce_seconds = Keyword.get(opts, :debounce_seconds, @default_debounce_seconds)
 
+    # Filter out directories that would cause infinite loops
+    safe_dirs =
+      dirs
+      |> Enum.map(&Path.expand/1)
+      |> Enum.reject(&would_cause_loop?(&1, expanded_data_dir))
+
+    if length(safe_dirs) < length(dirs) do
+      Logger.warning("Some directories were excluded to prevent infinite loops with data directory")
+    end
+
     dir_repo_map =
-      Map.new(dirs, fn dir ->
-        expanded = Path.expand(dir)
+      Map.new(safe_dirs, fn expanded ->
         {expanded, detect_repo(expanded)}
       end)
 
     watcher_pids =
-      for dir <- dirs do
-        {:ok, pid} = FileSystem.start_link(dirs: [dir])
+      Map.new(safe_dirs, fn expanded ->
+        {:ok, pid} = FileSystem.start_link(dirs: [expanded])
         FileSystem.subscribe(pid)
-        pid
-      end
+        {expanded, pid}
+      end)
 
     {:ok,
      %{
@@ -60,6 +85,63 @@ defmodule TimeWatcher.Watcher do
        last_event_at: %{},
        watcher_pids: watcher_pids
      }}
+  end
+
+  @impl true
+  def handle_call({:add_dir, dir}, _from, state) do
+    expanded = Path.expand(dir)
+    data_dir = Path.expand(state.data_dir)
+
+    cond do
+      would_cause_loop?(expanded, data_dir) ->
+        {:reply, {:error, :would_cause_loop}, state}
+
+      Map.has_key?(state.dir_repo_map, expanded) ->
+        {:reply, {:error, :already_watching}, state}
+
+      true ->
+        {:ok, pid} = FileSystem.start_link(dirs: [expanded])
+        FileSystem.subscribe(pid)
+
+        new_state = %{
+          state
+          | dir_repo_map: Map.put(state.dir_repo_map, expanded, detect_repo(expanded)),
+            watcher_pids: Map.put(state.watcher_pids, expanded, pid)
+        }
+
+        {:reply, :ok, new_state}
+    end
+  end
+
+  @impl true
+  def handle_call(:list_dirs, _from, state) do
+    dirs =
+      state.dir_repo_map
+      |> Enum.map(fn {path, repo} -> %{path: path, repo: repo} end)
+      |> Enum.sort_by(& &1.path)
+
+    {:reply, dirs, state}
+  end
+
+  @impl true
+  def handle_call({:remove_dir, dir}, _from, state) do
+    expanded = Path.expand(dir)
+
+    case Map.get(state.watcher_pids, expanded) do
+      nil ->
+        {:reply, {:error, :not_watching}, state}
+
+      pid ->
+        GenServer.stop(pid)
+
+        new_state = %{
+          state
+          | dir_repo_map: Map.delete(state.dir_repo_map, expanded),
+            watcher_pids: Map.delete(state.watcher_pids, expanded)
+        }
+
+        {:reply, :ok, new_state}
+    end
   end
 
   @impl true
@@ -120,5 +202,10 @@ defmodule TimeWatcher.Watcher do
         {:error, reason} -> Logger.warning("git commit failed: #{inspect(reason)}")
       end
     end)
+  end
+
+  defp would_cause_loop?(watch_dir, data_dir) do
+    # Check if watch_dir is the data_dir, contains it, or is inside it
+    String.starts_with?(watch_dir, data_dir) or String.starts_with?(data_dir, watch_dir)
   end
 end
