@@ -6,24 +6,28 @@ defmodule TimeWatcher.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      if daemon_mode?() do
-        start_distribution()
-        dirs = parse_watch_dirs()
-        data_dir = Storage.data_dir()
-        File.mkdir_p!(data_dir)
+    if daemon_mode?() do
+      case start_distribution() do
+        :ok ->
+          dirs = parse_watch_dirs()
+          data_dir = Storage.data_dir()
+          File.mkdir_p!(data_dir)
 
-        IO.puts("Daemon started, watching: #{Enum.join(dirs, ", ")}")
+          IO.puts("Daemon started, watching: #{Enum.join(dirs, ", ")}")
 
-        [
-          {Watcher, dirs: dirs, data_dir: data_dir, name: Watcher}
-        ]
-      else
-        []
+          children = [{Watcher, dirs: dirs, data_dir: data_dir, name: Watcher}]
+          opts = [strategy: :one_for_one, name: TimeWatcher.Supervisor]
+          Supervisor.start_link(children, opts)
+
+        {:error, _reason} ->
+          IO.puts("Error: Another daemon is already running.")
+          IO.puts("Use 'tw add <dir>' to add directories to the running daemon.")
+          System.halt(1)
       end
-
-    opts = [strategy: :one_for_one, name: TimeWatcher.Supervisor]
-    Supervisor.start_link(children, opts)
+    else
+      opts = [strategy: :one_for_one, name: TimeWatcher.Supervisor]
+      Supervisor.start_link([], opts)
+    end
   end
 
   defp daemon_mode? do
@@ -52,7 +56,6 @@ defmodule TimeWatcher.Application do
         :ok
 
       {:error, reason} ->
-        IO.puts("Warning: Could not start distribution: #{inspect(reason)}")
         {:error, reason}
     end
   end
