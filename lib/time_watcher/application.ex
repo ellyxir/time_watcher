@@ -23,13 +23,22 @@ defmodule TimeWatcher.Application do
   defp start_watcher_supervisor do
     {dirs, verbose, dirs_from_config} = parse_watch_args()
     data_dir = Storage.data_dir()
+    ignore_patterns = Application.get_env(:time_watcher, :ignore_patterns, [])
     File.mkdir_p!(data_dir)
 
     if verbose do
       IO.puts(StartupMessage.build(dirs, dirs_from_config: dirs_from_config))
     end
 
-    children = [{Watcher, dirs: dirs, data_dir: data_dir, verbose: verbose, name: Watcher}]
+    children = [
+      {Watcher,
+       dirs: dirs,
+       data_dir: data_dir,
+       verbose: verbose,
+       ignore_patterns: ignore_patterns,
+       name: Watcher}
+    ]
+
     Supervisor.start_link(children, strategy: :one_for_one, name: TimeWatcher.Supervisor)
   end
 

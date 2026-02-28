@@ -18,6 +18,7 @@ defmodule TimeWatcher.Daemon do
     * `:data_dir` - Data directory for storage (default: Storage.data_dir())
     * `:verbose` - Whether to print verbose output (default: false)
     * `:dirs_from_config` - Whether dirs came from config file (default: false)
+    * `:ignore_patterns` - Glob patterns for filenames to ignore (default: [])
   """
   @spec start_daemon(keyword()) :: :ok | {:error, term()}
   def start_daemon(opts) do
@@ -25,6 +26,7 @@ defmodule TimeWatcher.Daemon do
     data_dir = Keyword.get(opts, :data_dir, Storage.data_dir())
     verbose = Keyword.get(opts, :verbose, false)
     dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
+    ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
 
     with :ok <- check_not_already_running(),
          :ok <- start_distribution() do
@@ -35,6 +37,7 @@ defmodule TimeWatcher.Daemon do
           dirs: dirs,
           data_dir: data_dir,
           verbose: verbose,
+          ignore_patterns: ignore_patterns,
           name: Watcher
         )
 

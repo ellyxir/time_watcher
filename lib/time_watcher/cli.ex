@@ -237,7 +237,9 @@ defmodule TimeWatcher.CLI do
         Application.get_env(:time_watcher, :verbose, false)
       end
 
-    {dirs, [verbose: verbose]}
+    ignore_patterns = Application.get_env(:time_watcher, :ignore_patterns, [])
+
+    {dirs, [verbose: verbose, ignore_patterns: ignore_patterns]}
   end
 
   @spec default_dirs() :: [String.t()]
@@ -294,8 +296,14 @@ defmodule TimeWatcher.CLI do
   defp run({:watch, dirs, opts}) do
     verbose = Keyword.get(opts, :verbose, false)
     dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
+    ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
 
-    daemon_opts = [dirs: dirs, verbose: verbose, dirs_from_config: dirs_from_config]
+    daemon_opts = [
+      dirs: dirs,
+      verbose: verbose,
+      dirs_from_config: dirs_from_config,
+      ignore_patterns: ignore_patterns
+    ]
 
     case Daemon.start_daemon(daemon_opts) do
       :ok ->

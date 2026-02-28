@@ -397,6 +397,166 @@ defmodule TimeWatcher.WatcherTest do
     end
   end
 
+  describe "ignore_patterns" do
+    test "ignores files matching glob patterns", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          ignore_patterns: [".watchman-cookie-*"]
+        )
+
+      # Simulate event for an ignored file
+      path = Path.join(watch_dir, ".watchman-cookie-nixos-12345")
+      send(pid, {:file_event, self(), {path, [:created]}})
+      Process.sleep(50)
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 0
+      GenServer.stop(pid)
+    end
+
+    test "records files not matching ignore patterns", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          ignore_patterns: [".watchman-cookie-*"]
+        )
+
+      # Simulate event for a normal file
+      path = Path.join(watch_dir, "my_module.ex")
+      send(pid, {:file_event, self(), {path, [:modified]}})
+      Process.sleep(50)
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 1
+      GenServer.stop(pid)
+    end
+
+    test "supports multiple ignore patterns", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          ignore_patterns: [".watchman-cookie-*", "*.swp", "*~"]
+        )
+
+      # Simulate events for various ignored files
+      paths = [
+        Path.join(watch_dir, ".watchman-cookie-12345"),
+        Path.join(watch_dir, "file.swp"),
+        Path.join(watch_dir, "backup~")
+      ]
+
+      for path <- paths do
+        send(pid, {:file_event, self(), {path, [:created]}})
+        Process.sleep(20)
+      end
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 0
+      GenServer.stop(pid)
+    end
+
+    test "empty ignore_patterns ignores nothing", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          ignore_patterns: []
+        )
+
+      path = Path.join(watch_dir, ".watchman-cookie-12345")
+      send(pid, {:file_event, self(), {path, [:created]}})
+      Process.sleep(50)
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 1
+      GenServer.stop(pid)
+    end
+
+    test "supports single character wildcard pattern", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          ignore_patterns: ["file?.txt"]
+        )
+
+      # Should ignore file1.txt but not file12.txt
+      path_ignored = Path.join(watch_dir, "file1.txt")
+      path_not_ignored = Path.join(watch_dir, "file12.txt")
+
+      send(pid, {:file_event, self(), {path_ignored, [:created]}})
+      Process.sleep(20)
+      send(pid, {:file_event, self(), {path_not_ignored, [:created]}})
+      Process.sleep(50)
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 1
+      GenServer.stop(pid)
+    end
+
+    test "no ignore_patterns option ignores nothing", %{data_dir: data_dir, watch_dir: watch_dir} do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir
+        )
+
+      path = Path.join(watch_dir, ".watchman-cookie-12345")
+      send(pid, {:file_event, self(), {path, [:created]}})
+      Process.sleep(50)
+
+      date_dir = Path.join(data_dir, Date.to_string(Date.utc_today()))
+
+      event_count =
+        case File.ls(date_dir) do
+          {:ok, files} -> length(Enum.filter(files, &String.ends_with?(&1, ".json")))
+          {:error, :enoent} -> 0
+        end
+
+      assert event_count == 1
+      GenServer.stop(pid)
+    end
+  end
+
   describe "verbose mode" do
     test "prints watched repos on init when verbose", %{data_dir: data_dir, watch_dir: watch_dir} do
       output =

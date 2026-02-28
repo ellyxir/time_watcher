@@ -256,6 +256,7 @@ TimeWatcher can be configured via a config file at `~/.config/time_watcher/confi
 - **dirs** — list of directories to watch by default
 - **verbose** — enable verbose event logging (requires `-v` flag to see output)
 - **cooldown** — default cooldown in minutes for reports
+- **ignore_patterns** — list of glob patterns for filenames to ignore (e.g., temp files created by editors or tools)
 
 ### Example config
 
@@ -265,8 +266,16 @@ import Config
 config :time_watcher,
   dirs: ["~/projects/client_a", "~/projects/client_b"],
   verbose: false,
-  cooldown: 10
+  cooldown: 10,
+  ignore_patterns: [".watchman-cookie-*", "*.swp", "*~"]
 ```
+
+The `ignore_patterns` option is useful for filtering out noise from tools that create temporary files. Common patterns:
+
+- `.watchman-cookie-*` — Phoenix/watchman live reload check files
+- `*.swp`, `*.swo` — Vim swap files
+- `*~` — Backup files from various editors
+- `.#*` — Emacs lock files
 
 ### CLI override
 

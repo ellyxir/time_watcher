@@ -102,6 +102,46 @@ defmodule TimeWatcher.ConfigTest do
     end
   end
 
+  describe "parse_args/1 with config ignore_patterns" do
+    setup do
+      original_patterns = Application.get_env(:time_watcher, :ignore_patterns)
+      original_dirs = Application.get_env(:time_watcher, :dirs)
+
+      on_exit(fn ->
+        if original_patterns do
+          Application.put_env(:time_watcher, :ignore_patterns, original_patterns)
+        else
+          Application.delete_env(:time_watcher, :ignore_patterns)
+        end
+
+        Application.put_env(:time_watcher, :dirs, original_dirs)
+      end)
+
+      :ok
+    end
+
+    test "watch uses ignore_patterns from config" do
+      Application.put_env(:time_watcher, :ignore_patterns, [".watchman-cookie-*", "*.swp"])
+      Application.delete_env(:time_watcher, :dirs)
+      {:watch, _dirs, opts} = CLI.parse_args(["watch"])
+      assert Keyword.get(opts, :ignore_patterns) == [".watchman-cookie-*", "*.swp"]
+    end
+
+    test "watch with no ignore_patterns config has empty list" do
+      Application.delete_env(:time_watcher, :ignore_patterns)
+      Application.delete_env(:time_watcher, :dirs)
+      {:watch, _dirs, opts} = CLI.parse_args(["watch"])
+      assert Keyword.get(opts, :ignore_patterns) == []
+    end
+
+    test "watch with empty ignore_patterns config has empty list" do
+      Application.put_env(:time_watcher, :ignore_patterns, [])
+      Application.delete_env(:time_watcher, :dirs)
+      {:watch, _dirs, opts} = CLI.parse_args(["watch"])
+      assert Keyword.get(opts, :ignore_patterns) == []
+    end
+  end
+
   describe "parse_args/1 with config cooldown" do
     setup do
       original_cooldown = Application.get_env(:time_watcher, :cooldown)

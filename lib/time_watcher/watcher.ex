@@ -67,6 +67,7 @@ defmodule TimeWatcher.Watcher do
     expanded_data_dir = Path.expand(data_dir)
     debounce_seconds = Keyword.get(opts, :debounce_seconds, @default_debounce_seconds)
     verbose = Keyword.get(opts, :verbose, false)
+    ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
 
     # Filter out directories that would cause infinite loops
     safe_dirs =
@@ -103,7 +104,8 @@ defmodule TimeWatcher.Watcher do
        debounce_seconds: debounce_seconds,
        last_event_at: %{},
        watcher_pids: watcher_pids,
-       verbose: verbose
+       verbose: verbose,
+       ignore_patterns: ignore_patterns
      }}
   end
 
@@ -175,7 +177,7 @@ defmodule TimeWatcher.Watcher do
     now = System.system_time(:second)
     repo = find_repo(path, state.dir_repo_map)
 
-    if repo && !debounced?(path, now, state) do
+    if repo && !ignored_path?(path, state.ignore_patterns) && !debounced?(path, now, state) do
       event = build_event(path, events, repo, now)
       save_event(event, path, state)
       {:noreply, %{state | last_event_at: Map.put(state.last_event_at, path, now)}}
@@ -258,6 +260,29 @@ defmodule TimeWatcher.Watcher do
       nil -> false
       last_at -> now - last_at < state.debounce_seconds
     end
+  end
+
+  @spec ignored_path?(String.t(), [String.t()]) :: boolean()
+  defp ignored_path?(_path, []), do: false
+
+  defp ignored_path?(path, patterns) do
+    filename = Path.basename(path)
+    Enum.any?(patterns, &match_glob?(filename, &1))
+  end
+
+  @spec match_glob?(String.t(), String.t()) :: boolean()
+  defp match_glob?(filename, pattern) do
+    regex = glob_to_regex(pattern)
+    Regex.match?(regex, filename)
+  end
+
+  @spec glob_to_regex(String.t()) :: Regex.t()
+  defp glob_to_regex(pattern) do
+    pattern
+    |> Regex.escape()
+    |> String.replace("\\*", ".*")
+    |> String.replace("\\?", ".")
+    |> then(&Regex.compile!("^#{&1}$"))
   end
 
   defp build_event(path, events, repo, now) do
