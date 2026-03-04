@@ -106,6 +106,17 @@ defmodule TimeWatcher.ReportTest do
       assert stretches == []
     end
 
+    test "legacy window_minutes option still works" do
+      # Events 8 minutes apart
+      events = [event(1_000_000, "repo"), event(1_000_480, "repo")]
+
+      # Default 10-min window: should merge
+      assert length(Report.stretches(events)) == 1
+
+      # Using legacy option name with 5-min window: should not merge
+      assert Report.stretches(events, window_minutes: 5) == []
+    end
+
     test "events exactly at merge window boundary still merge" do
       # Events exactly 10 minutes apart (600 seconds)
       events = [event(1_000_000, "repo"), event(1_000_600, "repo")]
