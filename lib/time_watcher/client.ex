@@ -60,16 +60,30 @@ defmodule TimeWatcher.Client do
   Ensures the client node is started and connected to the daemon.
   Returns :ok if connected, {:error, :daemon_not_running} otherwise.
   """
-  @spec ensure_connected() :: :ok | {:error, :daemon_not_running}
+  @spec ensure_connected() :: :ok | {:error, :daemon_not_running | :distribution_failed}
   def ensure_connected do
-    start_distribution()
+    case start_distribution() do
+      :ok ->
+        # Brief pause to ensure epmd registration is complete
+        Process.sleep(10)
+        connect_with_retry(Node.daemon_node_name(), 5)
 
-    daemon_node = Node.daemon_node_name()
+      {:error, :distribution_failed} = error ->
+        error
+    end
+  end
 
+  @spec connect_with_retry(atom(), non_neg_integer()) :: :ok | {:error, :daemon_not_running}
+  defp connect_with_retry(_daemon_node, 0), do: {:error, :daemon_not_running}
+
+  defp connect_with_retry(daemon_node, attempts_left) do
     case Elixir.Node.connect(daemon_node) do
-      true -> :ok
-      false -> {:error, :daemon_not_running}
-      :ignored -> {:error, :daemon_not_running}
+      true ->
+        :ok
+
+      _failed ->
+        Process.sleep(20)
+        connect_with_retry(daemon_node, attempts_left - 1)
     end
   end
 

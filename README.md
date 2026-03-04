@@ -296,6 +296,8 @@ tw watch ~/other/project
 
 To start TimeWatcher automatically on boot, create a systemd service.
 
+**Important:** Use the `-v` flag to run in foreground mode. Without it, `tw watch` spawns a background daemon and exits, which systemd interprets as a failure.
+
 ### NixOS
 
 Add to your `configuration.nix`:
@@ -304,8 +306,9 @@ Add to your `configuration.nix`:
 systemd.services.time_watcher = {
   description = "Time Watcher";
   wantedBy = [ "multi-user.target" ];
+  path = [ "/run/current-system/sw" ];  # Required for inotifywait
   serviceConfig = {
-    ExecStart = "/home/youruser/.nix-profile/bin/tw watch";
+    ExecStart = "/home/youruser/.nix-profile/bin/tw watch -v";
     User = "youruser";
     Restart = "on-failure";
   };
@@ -313,6 +316,8 @@ systemd.services.time_watcher = {
 ```
 
 Then rebuild: `sudo nixos-rebuild switch`
+
+The `path` setting is required on NixOS to include `inotifywait` in the service's PATH.
 
 ### Other Linux distributions
 
@@ -324,7 +329,7 @@ Description=Time Watcher
 After=default.target
 
 [Service]
-ExecStart=%h/.local/bin/tw watch
+ExecStart=%h/.local/bin/tw watch -v
 Restart=on-failure
 
 [Install]
