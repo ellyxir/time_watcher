@@ -277,7 +277,7 @@ defmodule TimeWatcher.CLI do
     if stretches == [] do
       IO.puts("No activity recorded for #{date}")
     else
-      total_seconds = Enum.reduce(stretches, 0, fn s, acc -> acc + (s.stop - s.start) end)
+      total_seconds = Report.total_duration(stretches)
       hours = div(total_seconds, 3600)
       minutes = div(rem(total_seconds, 3600), 60)
 
@@ -513,7 +513,7 @@ defmodule TimeWatcher.CLI do
     else
       grand_total =
         day_results
-        |> Enum.map(fn {_date, stretches} -> sum_stretches(stretches) end)
+        |> Enum.map(fn {_date, stretches} -> Report.total_duration(stretches) end)
         |> Enum.sum()
 
       Enum.each(day_results, fn {date, stretches} ->
@@ -538,14 +538,9 @@ defmodule TimeWatcher.CLI do
     end
   end
 
-  @spec sum_stretches([Report.stretch()]) :: non_neg_integer()
-  defp sum_stretches(stretches) do
-    Enum.reduce(stretches, 0, fn s, acc -> acc + (s.stop - s.start) end)
-  end
-
   @spec print_day_report(String.t(), [Report.stretch()], boolean()) :: :ok
   defp print_day_report(date, stretches, markdown?) do
-    day_total = sum_stretches(stretches)
+    day_total = Report.total_duration(stretches)
     day_hours = div(day_total, 3600)
     day_minutes = div(rem(day_total, 3600), 60)
 

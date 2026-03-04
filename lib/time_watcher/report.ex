@@ -46,6 +46,20 @@ defmodule TimeWatcher.Report do
   end
 
   @doc """
+  Returns the duration of a stretch in seconds.
+  """
+  @spec duration(stretch()) :: non_neg_integer()
+  def duration(stretch), do: stretch.stop - stretch.start
+
+  @doc """
+  Returns the total duration of all stretches in seconds.
+  """
+  @spec total_duration([stretch()]) :: non_neg_integer()
+  def total_duration(stretches) do
+    Enum.reduce(stretches, 0, fn s, acc -> acc + duration(s) end)
+  end
+
+  @doc """
   Formats stretches as human-readable text lines.
   """
   @spec format([stretch()]) :: String.t()
@@ -77,7 +91,7 @@ defmodule TimeWatcher.Report do
   defp format_stretch_parts(s) do
     start_time = DateTime.from_unix!(s.start) |> Calendar.strftime("%H:%M")
     stop_time = DateTime.from_unix!(s.stop) |> Calendar.strftime("%H:%M")
-    duration_seconds = s.stop - s.start
+    duration_seconds = duration(s)
     hours = div(duration_seconds, 3600)
     minutes = div(rem(duration_seconds, 3600), 60)
     {start_time, stop_time, "#{hours}h #{minutes}m"}

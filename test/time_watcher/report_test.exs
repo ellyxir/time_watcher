@@ -117,6 +117,45 @@ defmodule TimeWatcher.ReportTest do
     end
   end
 
+  describe "duration/1" do
+    test "returns duration in seconds for a stretch" do
+      stretch = %{repo: "repo", start: 1_000_000, stop: 1_000_120}
+      assert Report.duration(stretch) == 120
+    end
+
+    test "returns zero for stretch with same start and stop" do
+      stretch = %{repo: "repo", start: 1_000_000, stop: 1_000_000}
+      assert Report.duration(stretch) == 0
+    end
+
+    test "works with large durations" do
+      # 2 hours = 7200 seconds
+      stretch = %{repo: "repo", start: 1_000_000, stop: 1_007_200}
+      assert Report.duration(stretch) == 7200
+    end
+  end
+
+  describe "total_duration/1" do
+    test "sums durations of multiple stretches" do
+      stretches = [
+        %{repo: "repo_a", start: 1_000_000, stop: 1_000_120},
+        %{repo: "repo_b", start: 1_000_200, stop: 1_000_500}
+      ]
+
+      # 120 + 300 = 420
+      assert Report.total_duration(stretches) == 420
+    end
+
+    test "returns zero for empty list" do
+      assert Report.total_duration([]) == 0
+    end
+
+    test "returns duration for single stretch" do
+      stretches = [%{repo: "repo", start: 1_000_000, stop: 1_000_060}]
+      assert Report.total_duration(stretches) == 60
+    end
+  end
+
   describe "format/1" do
     test "outputs human-readable lines with duration" do
       stretches = [
