@@ -292,6 +292,57 @@ tw report --cooldown 5
 tw watch ~/other/project
 ```
 
+## Running as a systemd service
+
+To start TimeWatcher automatically on boot, create a systemd service.
+
+### NixOS
+
+Add to your `configuration.nix`:
+
+```nix
+systemd.services.time_watcher = {
+  description = "Time Watcher";
+  wantedBy = [ "multi-user.target" ];
+  serviceConfig = {
+    ExecStart = "/home/youruser/.nix-profile/bin/tw watch";
+    User = "youruser";
+    Restart = "on-failure";
+  };
+};
+```
+
+Then rebuild: `sudo nixos-rebuild switch`
+
+### Other Linux distributions
+
+Create `~/.config/systemd/user/time_watcher.service`:
+
+```ini
+[Unit]
+Description=Time Watcher
+After=default.target
+
+[Service]
+ExecStart=%h/.local/bin/tw watch
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+```
+
+Then enable and start:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable time_watcher
+systemctl --user start time_watcher
+```
+
+Check status with `systemctl --user status time_watcher`.
+
+Note: Don't pass directories to `tw watch` in the service file — configure them in `~/.config/time_watcher/config.exs` instead. This keeps your directory list in one place.
+
 ## Development
 
 ```sh
