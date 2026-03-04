@@ -309,6 +309,70 @@ defmodule TimeWatcher.CLITest do
     test "parses '-V'" do
       assert CLI.parse_args(["-V"]) == :version
     end
+
+    test "parses 'report --help'" do
+      assert CLI.parse_args(["report", "--help"]) == {:help, :report}
+    end
+
+    test "parses 'report -h'" do
+      assert CLI.parse_args(["report", "-h"]) == {:help, :report}
+    end
+
+    test "parses 'watch --help'" do
+      assert CLI.parse_args(["watch", "--help"]) == {:help, :watch}
+    end
+
+    test "parses 'watch -h'" do
+      assert CLI.parse_args(["watch", "-h"]) == {:help, :watch}
+    end
+
+    test "parses 'stop --help'" do
+      assert CLI.parse_args(["stop", "--help"]) == {:help, :stop}
+    end
+
+    test "parses 'stop -h'" do
+      assert CLI.parse_args(["stop", "-h"]) == {:help, :stop}
+    end
+
+    test "parses 'list --help'" do
+      assert CLI.parse_args(["list", "--help"]) == {:help, :list}
+    end
+
+    test "parses 'list -h'" do
+      assert CLI.parse_args(["list", "-h"]) == {:help, :list}
+    end
+
+    test "parses 'remove --help'" do
+      assert CLI.parse_args(["remove", "--help"]) == {:help, :remove}
+    end
+
+    test "parses 'remove -h'" do
+      assert CLI.parse_args(["remove", "-h"]) == {:help, :remove}
+    end
+
+    test "parses 'commit --help'" do
+      assert CLI.parse_args(["commit", "--help"]) == {:help, :commit}
+    end
+
+    test "parses 'commit -h'" do
+      assert CLI.parse_args(["commit", "-h"]) == {:help, :commit}
+    end
+
+    test "parses 'reset --help'" do
+      assert CLI.parse_args(["reset", "--help"]) == {:help, :reset}
+    end
+
+    test "parses 'reset -h'" do
+      assert CLI.parse_args(["reset", "-h"]) == {:help, :reset}
+    end
+
+    test "parses 'decode --help'" do
+      assert CLI.parse_args(["decode", "--help"]) == {:help, :decode}
+    end
+
+    test "parses 'decode -h'" do
+      assert CLI.parse_args(["decode", "-h"]) == {:help, :decode}
+    end
   end
 
   describe "version/0" do
