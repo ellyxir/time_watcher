@@ -18,7 +18,7 @@ Hope you find it helpful!
 
 Each file change creates an event with a timestamp, repo name, hashed file path, and event type. Rapid saves to the same file are debounced (1 event per minute), but editing different files produces separate events.
 
-Reports show stretches of activity by expanding each event into a 10-minute window (5 min before, 5 min after). Overlapping windows merge into a single stretch.
+Reports show stretches of continuous activity. Events within the merge window (10 minutes by default) are grouped into the same stretch. The reported duration is the actual time between the first and last event in each stretch. A single isolated event doesn't produce a stretch since it can't establish a duration.
 
 ## Install
 
