@@ -42,6 +42,18 @@ defmodule TimeWatcher.ReportTest do
       assert stretches == []
     end
 
+    test "multiple isolated events produce no stretches" do
+      # Events 20 minutes apart each - all isolated
+      events = [
+        event(1_000_000, "repo"),
+        event(1_001_200, "repo"),
+        event(1_002_400, "repo")
+      ]
+
+      stretches = Report.stretches(events)
+      assert stretches == []
+    end
+
     test "three events where two are close produces one stretch" do
       # Events at 0, 2min, and 20min - first two merge, third is isolated
       events = [

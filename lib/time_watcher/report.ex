@@ -28,6 +28,7 @@ defmodule TimeWatcher.Report do
   """
   @spec stretches([Event.t()], keyword()) :: [stretch()]
   def stretches(events, opts \\ []) do
+    # Supports legacy :window_minutes for backward compatibility
     merge_window_minutes =
       Keyword.get(opts, :merge_window_minutes) ||
         Keyword.get(opts, :window_minutes, @default_merge_window_minutes)
