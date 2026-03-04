@@ -564,7 +564,7 @@ defmodule TimeWatcher.CLI do
   defp build_report_opts(opts) do
     case Keyword.get(opts, :cooldown) do
       nil -> []
-      minutes -> [window_minutes: minutes * 2]
+      minutes -> [merge_window_minutes: minutes * 2]
     end
   end
 

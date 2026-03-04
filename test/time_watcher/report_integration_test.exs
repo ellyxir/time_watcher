@@ -21,6 +21,7 @@ defmodule TimeWatcher.ReportIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
+      # Need at least 2 events per repo to produce a stretch
       events = [
         %Event{timestamp: base_time, repo: "project_a", hashed_path: "a1", event_type: :modified},
         %Event{
@@ -34,6 +35,12 @@ defmodule TimeWatcher.ReportIntegrationTest do
           repo: "project_b",
           hashed_path: "b1",
           event_type: :created
+        },
+        %Event{
+          timestamp: base_time + 3720,
+          repo: "project_b",
+          hashed_path: "b2",
+          event_type: :modified
         }
       ]
 
@@ -41,9 +48,9 @@ defmodule TimeWatcher.ReportIntegrationTest do
 
       # Load from disk
       loaded_events = Storage.load_events(date, data_dir)
-      assert length(loaded_events) == 3
+      assert length(loaded_events) == 4
 
-      # Generate stretches
+      # Generate stretches (one per repo with 2+ events)
       stretches = Report.stretches(loaded_events)
       assert length(stretches) == 2
 
@@ -58,6 +65,7 @@ defmodule TimeWatcher.ReportIntegrationTest do
       date = timestamp_to_date(base_time)
 
       # Create interleaved events across 3 repos
+      # Each repo needs at least 2 events to produce a stretch
       events = [
         %Event{timestamp: base_time, repo: "repo_1", hashed_path: "h1", event_type: :modified},
         %Event{
@@ -83,6 +91,12 @@ defmodule TimeWatcher.ReportIntegrationTest do
           repo: "repo_2",
           hashed_path: "h5",
           event_type: :modified
+        },
+        %Event{
+          timestamp: base_time + 300,
+          repo: "repo_3",
+          hashed_path: "h6",
+          event_type: :modified
         }
       ]
 
@@ -91,7 +105,7 @@ defmodule TimeWatcher.ReportIntegrationTest do
       loaded = Storage.load_events(date, data_dir)
       stretches = Report.stretches(loaded)
 
-      # Should have 3 stretches (one per repo, since events are close enough to merge)
+      # Should have 3 stretches (one per repo with 2+ events)
       repos = stretches |> Enum.map(& &1.repo) |> Enum.sort()
       assert repos == ["repo_1", "repo_2", "repo_3"]
     end
@@ -165,13 +179,26 @@ defmodule TimeWatcher.ReportIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
+      # Each repo needs at least 2 events to produce a stretch
       events = [
         %Event{timestamp: base_time, repo: "my_project", hashed_path: "a", event_type: :modified},
+        %Event{
+          timestamp: base_time + 120,
+          repo: "my_project",
+          hashed_path: "a2",
+          event_type: :modified
+        },
         %Event{
           timestamp: base_time + 3600,
           repo: "other_project",
           hashed_path: "b",
           event_type: :created
+        },
+        %Event{
+          timestamp: base_time + 3720,
+          repo: "other_project",
+          hashed_path: "b2",
+          event_type: :modified
         }
       ]
 
@@ -200,8 +227,8 @@ defmodule TimeWatcher.ReportIntegrationTest do
       date = timestamp_to_date(base_time)
 
       # Events 12 minutes apart (720 seconds)
-      # Default 10-min window: each event gets 5min before/after, so 10min total
-      # 12 min apart means windows don't overlap with default
+      # Default 10-min merge window: too far apart, no stretch
+      # 30-min merge window: within range, events merge into 1 stretch
       events = [
         %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
         %Event{timestamp: base_time + 720, repo: "repo", hashed_path: "b", event_type: :modified}
@@ -211,22 +238,24 @@ defmodule TimeWatcher.ReportIntegrationTest do
 
       loaded = Storage.load_events(date, data_dir)
 
-      # Default 10-min window: 12 min apart = separate stretches
+      # Default 10-min window: 12 min apart = no stretch (isolated events)
       default_stretches = Report.stretches(loaded)
-      assert length(default_stretches) == 2
+      assert default_stretches == []
 
-      # 30-min window: 12 min apart = merged (each gets 15min buffer)
-      large_stretches = Report.stretches(loaded, window_minutes: 30)
+      # 30-min window: 12 min apart = merged into 1 stretch
+      large_stretches = Report.stretches(loaded, merge_window_minutes: 30)
       assert length(large_stretches) == 1
     end
 
-    test "smaller window creates more stretches", %{data_dir: data_dir} do
+    test "smaller window creates separate events that dont produce stretches", %{
+      data_dir: data_dir
+    } do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
       # Events 6 minutes apart (360 seconds)
-      # Default 10-min window: windows overlap (5+5=10 > 6)
-      # 4-min window: windows don't overlap (2+2=4 < 6)
+      # Default 10-min merge window: within range, merge into 1 stretch
+      # 4-min merge window: too far apart, no stretch
       events = [
         %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
         %Event{timestamp: base_time + 360, repo: "repo", hashed_path: "b", event_type: :modified}
@@ -240,9 +269,9 @@ defmodule TimeWatcher.ReportIntegrationTest do
       default_stretches = Report.stretches(loaded)
       assert length(default_stretches) == 1
 
-      # 4-min window: 6 min apart = separate
-      small_stretches = Report.stretches(loaded, window_minutes: 4)
-      assert length(small_stretches) == 2
+      # 4-min window: 6 min apart = no stretch (isolated events)
+      small_stretches = Report.stretches(loaded, merge_window_minutes: 4)
+      assert small_stretches == []
     end
   end
 
@@ -251,35 +280,71 @@ defmodule TimeWatcher.ReportIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
-      # Single event with 10-min window = 10 min duration
-      event = %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified}
-      Storage.save_event(event, data_dir)
+      # Two events 5 minutes apart = 5 min duration (actual time between events)
+      events = [
+        %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
+        %Event{timestamp: base_time + 300, repo: "repo", hashed_path: "b", event_type: :modified}
+      ]
+
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       loaded = Storage.load_events(date, data_dir)
       [stretch] = Report.stretches(loaded)
 
-      # Default 10-min window: 5 min before + 5 min after
+      # Duration is actual time between first and last event
       duration = stretch.stop - stretch.start
-      assert duration == 600
+      assert duration == 300
+    end
+
+    test "single event produces no stretch", %{data_dir: data_dir} do
+      base_time = 1_736_935_200
+      date = timestamp_to_date(base_time)
+
+      event = %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified}
+      Storage.save_event(event, data_dir)
+
+      loaded = Storage.load_events(date, data_dir)
+      stretches = Report.stretches(loaded)
+
+      # Single event cannot establish a duration
+      assert stretches == []
     end
 
     test "stretches are sorted by start time", %{data_dir: data_dir} do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
-      # Add events in random order
+      # Add events in random order, each repo needs 2+ events
       events = [
         %Event{
           timestamp: base_time + 7200,
           repo: "third",
-          hashed_path: "c",
+          hashed_path: "c1",
           event_type: :modified
         },
-        %Event{timestamp: base_time, repo: "first", hashed_path: "a", event_type: :modified},
+        %Event{
+          timestamp: base_time + 7260,
+          repo: "third",
+          hashed_path: "c2",
+          event_type: :modified
+        },
+        %Event{timestamp: base_time, repo: "first", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: base_time + 60,
+          repo: "first",
+          hashed_path: "a2",
+          event_type: :modified
+        },
         %Event{
           timestamp: base_time + 3600,
           repo: "second",
-          hashed_path: "b",
+          hashed_path: "b1",
+          event_type: :modified
+        },
+        %Event{
+          timestamp: base_time + 3660,
+          repo: "second",
+          hashed_path: "b2",
           event_type: :modified
         }
       ]

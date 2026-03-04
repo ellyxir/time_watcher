@@ -65,14 +65,23 @@ defmodule TimeWatcher.CLIIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
-      event = %Event{
+      # Need at least 2 events to produce a stretch
+      event1 = %Event{
         timestamp: base_time,
         repo: "my_app",
         hashed_path: "abc",
         event_type: :modified
       }
 
-      Storage.save_event(event, data_dir)
+      event2 = %Event{
+        timestamp: base_time + 120,
+        repo: "my_app",
+        hashed_path: "def",
+        event_type: :modified
+      }
+
+      Storage.save_event(event1, data_dir)
+      Storage.save_event(event2, data_dir)
 
       output =
         capture_io(fn ->
@@ -133,30 +142,42 @@ defmodule TimeWatcher.CLIIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
-      event1 = %Event{
-        timestamp: base_time,
-        repo: "app_one",
-        hashed_path: "a",
-        event_type: :modified
-      }
+      # Each repo needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: base_time, repo: "app_one", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: base_time + 60,
+          repo: "app_one",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{
+          timestamp: base_time + 120,
+          repo: "app_two",
+          hashed_path: "b1",
+          event_type: :created
+        },
+        %Event{
+          timestamp: base_time + 180,
+          repo: "app_two",
+          hashed_path: "b2",
+          event_type: :modified
+        },
+        %Event{
+          timestamp: base_time + 240,
+          repo: "app_three",
+          hashed_path: "c1",
+          event_type: :deleted
+        },
+        %Event{
+          timestamp: base_time + 300,
+          repo: "app_three",
+          hashed_path: "c2",
+          event_type: :modified
+        }
+      ]
 
-      event2 = %Event{
-        timestamp: base_time + 60,
-        repo: "app_two",
-        hashed_path: "b",
-        event_type: :created
-      }
-
-      event3 = %Event{
-        timestamp: base_time + 120,
-        repo: "app_three",
-        hashed_path: "c",
-        event_type: :deleted
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event2, data_dir)
-      Storage.save_event(event3, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       output =
         capture_io(fn ->
@@ -176,22 +197,25 @@ defmodule TimeWatcher.CLIIntegrationTest do
       # Day 2: 2026-01-16 10:00 UTC (24 hours later)
       day2_time = day1_time + 86_400
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{
+          timestamp: day2_time + 120,
+          repo: "my_app",
+          hashed_path: "b2",
+          event_type: :modified
+        }
+      ]
 
-      event2 = %Event{
-        timestamp: day2_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event2, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day2_time)
@@ -211,22 +235,25 @@ defmodule TimeWatcher.CLIIntegrationTest do
       day1_time = 1_736_935_200
       day2_time = day1_time + 86_400
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{
+          timestamp: day2_time + 120,
+          repo: "my_app",
+          hashed_path: "b2",
+          event_type: :modified
+        }
+      ]
 
-      event2 = %Event{
-        timestamp: day2_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event2, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day2_time)
@@ -245,25 +272,28 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
     test "skips days with no activity", %{data_dir: data_dir} do
       day1_time = 1_736_935_200
-      # Skip day 2, add event on day 3
+      # Skip day 2, add events on day 3
       day3_time = day1_time + 86_400 * 2
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day3_time, repo: "my_app", hashed_path: "c1", event_type: :modified},
+        %Event{
+          timestamp: day3_time + 120,
+          repo: "my_app",
+          hashed_path: "c2",
+          event_type: :modified
+        }
+      ]
 
-      event3 = %Event{
-        timestamp: day3_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event3, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day1_time + 86_400)
@@ -328,22 +358,25 @@ defmodule TimeWatcher.CLIIntegrationTest do
       # Day 2: 2026-01-16 10:00 UTC (24 hours later)
       day2_time = day1_time + 86_400
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{
+          timestamp: day2_time + 120,
+          repo: "my_app",
+          hashed_path: "b2",
+          event_type: :modified
+        }
+      ]
 
-      event2 = %Event{
-        timestamp: day2_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event2, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day2_time)
@@ -363,22 +396,25 @@ defmodule TimeWatcher.CLIIntegrationTest do
       day1_time = 1_736_935_200
       day2_time = day1_time + 86_400
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{
+          timestamp: day2_time + 120,
+          repo: "my_app",
+          hashed_path: "b2",
+          event_type: :modified
+        }
+      ]
 
-      event2 = %Event{
-        timestamp: day2_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event2, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day2_time)
@@ -397,25 +433,28 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
     test "skips days with no activity in date range", %{data_dir: data_dir} do
       day1_time = 1_736_935_200
-      # Skip day 2, add event on day 3
+      # Skip day 2, add events on day 3
       day3_time = day1_time + 86_400 * 2
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Each day needs at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        },
+        %Event{timestamp: day3_time, repo: "my_app", hashed_path: "c1", event_type: :modified},
+        %Event{
+          timestamp: day3_time + 120,
+          repo: "my_app",
+          hashed_path: "c2",
+          event_type: :modified
+        }
+      ]
 
-      event3 = %Event{
-        timestamp: day3_time,
-        repo: "my_app",
-        hashed_path: "def",
-        event_type: :modified
-      }
-
-      Storage.save_event(event1, data_dir)
-      Storage.save_event(event3, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       date1 = timestamp_to_date(day1_time)
       date2 = timestamp_to_date(day1_time + 86_400)
@@ -445,14 +484,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
       day1_time = 1_736_935_200
       date1 = timestamp_to_date(day1_time)
 
-      event1 = %Event{
-        timestamp: day1_time,
-        repo: "my_app",
-        hashed_path: "abc",
-        event_type: :modified
-      }
+      # Need at least 2 events to produce a stretch
+      events = [
+        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{
+          timestamp: day1_time + 120,
+          repo: "my_app",
+          hashed_path: "a2",
+          event_type: :modified
+        }
+      ]
 
-      Storage.save_event(event1, data_dir)
+      Enum.each(events, &Storage.save_event(&1, data_dir))
 
       output =
         capture_io(fn ->
@@ -529,7 +572,7 @@ defmodule TimeWatcher.CLIIntegrationTest do
   defp build_report_opts(opts) do
     case Keyword.get(opts, :cooldown) do
       nil -> []
-      minutes -> [window_minutes: minutes * 2]
+      minutes -> [merge_window_minutes: minutes * 2]
     end
   end
 

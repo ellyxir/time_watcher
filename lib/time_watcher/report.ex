@@ -1,28 +1,45 @@
 defmodule TimeWatcher.Report do
   @moduledoc """
-  Merges event windows into activity stretches and formats reports.
+  Merges nearby events into activity stretches and formats reports.
+
+  The merge window determines how close events must be to be considered part of
+  the same work session. Only stretches with at least two events are reported,
+  since a single event cannot establish a duration.
   """
 
   alias TimeWatcher.Event
 
-  @default_window_minutes 10
+  @default_merge_window_minutes 10
 
   @type stretch :: %{repo: String.t(), start: integer(), stop: integer()}
 
+  @doc """
+  Groups events into stretches of continuous activity.
+
+  Events within `merge_window_minutes` of each other are merged into a single
+  stretch. The stretch boundaries are the actual timestamps of the first and
+  last events (no padding). Single events are excluded since they don't
+  establish a measurable duration.
+
+  ## Options
+
+    * `:merge_window_minutes` - max gap between events to merge (default: 10)
+
+  """
   @spec stretches([Event.t()], keyword()) :: [stretch()]
   def stretches(events, opts \\ []) do
-    window_minutes = Keyword.get(opts, :window_minutes, @default_window_minutes)
-    half_window = div(window_minutes * 60, 2)
+    merge_window_minutes =
+      Keyword.get(opts, :merge_window_minutes) ||
+        Keyword.get(opts, :window_minutes, @default_merge_window_minutes)
+
+    merge_window_seconds = merge_window_minutes * 60
 
     events
     |> Enum.group_by(& &1.repo)
     |> Enum.flat_map(fn {repo, repo_events} ->
       repo_events
       |> Enum.sort_by(& &1.timestamp)
-      |> Enum.map(fn e ->
-        %{repo: repo, start: e.timestamp - half_window, stop: e.timestamp + half_window}
-      end)
-      |> merge_windows()
+      |> merge_events(repo, merge_window_seconds)
     end)
     |> Enum.sort_by(& &1.start)
   end
@@ -65,16 +82,22 @@ defmodule TimeWatcher.Report do
     {start_time, stop_time, "#{hours}h #{minutes}m"}
   end
 
-  defp merge_windows([]), do: []
+  @spec merge_events([Event.t()], String.t(), integer()) :: [stretch()]
+  defp merge_events([], _repo, _merge_window), do: []
 
-  defp merge_windows([first | rest]) do
-    Enum.reduce(rest, [first], fn window, [current | acc] ->
-      if window.start <= current.stop do
-        [%{current | stop: max(current.stop, window.stop)} | acc]
+  defp merge_events([first | rest], repo, merge_window) do
+    initial = %{start: first.timestamp, stop: first.timestamp, count: 1}
+
+    rest
+    |> Enum.reduce([initial], fn event, [current | acc] ->
+      if event.timestamp - current.stop <= merge_window do
+        [%{current | stop: event.timestamp, count: current.count + 1} | acc]
       else
-        [window, current | acc]
+        [%{start: event.timestamp, stop: event.timestamp, count: 1}, current | acc]
       end
     end)
+    |> Enum.filter(fn stretch -> stretch.count >= 2 end)
+    |> Enum.map(fn stretch -> %{repo: repo, start: stretch.start, stop: stretch.stop} end)
     |> Enum.reverse()
   end
 end
