@@ -5,6 +5,8 @@ defmodule TimeWatcher.CLI do
 
   alias TimeWatcher.{Client, Daemon, Decoder, Report, Storage}
 
+  @typep subcommand :: :report | :watch | :stop | :list | :remove | :commit | :reset | :decode
+
   @typep command ::
            {:report, String.t() | :multi_day | :date_range, keyword()}
            | {:watch, [String.t()], keyword()}
@@ -17,6 +19,7 @@ defmodule TimeWatcher.CLI do
            | {:decode, String.t(), String.t()}
            | :version
            | :help
+           | {:help, subcommand()}
            | {:error, String.t()}
 
   @spec main([String.t()]) :: :ok
@@ -25,6 +28,15 @@ defmodule TimeWatcher.CLI do
   end
 
   @spec parse_args([String.t()]) :: command()
+  def parse_args(["report", flag]) when flag in ["--help", "-h"], do: {:help, :report}
+  def parse_args(["watch", flag]) when flag in ["--help", "-h"], do: {:help, :watch}
+  def parse_args(["stop", flag]) when flag in ["--help", "-h"], do: {:help, :stop}
+  def parse_args(["list", flag]) when flag in ["--help", "-h"], do: {:help, :list}
+  def parse_args(["remove", flag]) when flag in ["--help", "-h"], do: {:help, :remove}
+  def parse_args(["commit", flag]) when flag in ["--help", "-h"], do: {:help, :commit}
+  def parse_args(["reset", flag]) when flag in ["--help", "-h"], do: {:help, :reset}
+  def parse_args(["decode", flag]) when flag in ["--help", "-h"], do: {:help, :decode}
+
   def parse_args(["report" | rest]) do
     case parse_report_args(rest) do
       {:error, _} = error -> error
@@ -385,6 +397,10 @@ defmodule TimeWatcher.CLI do
     IO.puts("tw #{version()}")
   end
 
+  defp run({:help, subcommand}) do
+    IO.puts(subcommand_help(subcommand))
+  end
+
   defp run(:help) do
     IO.puts("""
     tw - git-based time tracker
@@ -408,6 +424,116 @@ defmodule TimeWatcher.CLI do
       --from DATE        Start of date range (requires --to)
       --to DATE          End of date range (requires --from)
     """)
+  end
+
+  @spec subcommand_help(subcommand()) :: String.t()
+  defp subcommand_help(:report) do
+    """
+    tw report - show activity report
+
+    Usage:
+      tw report [YYYY-MM-DD] [options]
+
+    Arguments:
+      YYYY-MM-DD         Date to show report for (default: today)
+
+    Options:
+      --md               Output in markdown format
+      --cooldown N       Minutes of inactivity to count as continuous (default: 5)
+      --days N           Show last N days of activity (including today)
+      --from DATE        Start of date range (requires --to)
+      --to DATE          End of date range (requires --from)
+    """
+  end
+
+  defp subcommand_help(:watch) do
+    """
+    tw watch - start daemon or add directories to it
+
+    Usage:
+      tw watch [-v] [dir1 dir2 ...]
+
+    Arguments:
+      dir1 dir2 ...      Directories to watch (default: current directory or config)
+
+    Options:
+      -v, --verbose      Print events as they are recorded
+    """
+  end
+
+  defp subcommand_help(:stop) do
+    """
+    tw stop - stop the daemon
+
+    Usage:
+      tw stop
+
+    Stops the file watching daemon.
+    """
+  end
+
+  defp subcommand_help(:list) do
+    """
+    tw list - list watched directories
+
+    Usage:
+      tw list
+
+    Shows all directories currently being watched by the daemon.
+    """
+  end
+
+  defp subcommand_help(:remove) do
+    """
+    tw remove - remove directories from daemon
+
+    Usage:
+      tw remove <dir1 dir2 ...>
+
+    Arguments:
+      dir1 dir2 ...      Directories to stop watching (required)
+    """
+  end
+
+  defp subcommand_help(:commit) do
+    """
+    tw commit - commit event data to git
+
+    Usage:
+      tw commit [-m "message"]
+
+    Options:
+      -m, --message      Custom commit message (default: "sync activity data")
+    """
+  end
+
+  defp subcommand_help(:reset) do
+    """
+    tw reset - delete events
+
+    Usage:
+      tw reset [YYYY-MM-DD]    Delete events for a date (default: today)
+      tw reset --all           Delete all events
+
+    Arguments:
+      YYYY-MM-DD         Date to delete events for
+
+    Options:
+      --all              Delete all events
+    """
+  end
+
+  defp subcommand_help(:decode) do
+    """
+    tw decode - show events with decoded file paths
+
+    Usage:
+      tw decode <repo-path> [YYYY-MM-DD]
+
+    Arguments:
+      repo-path          Path to the git repository (required)
+      YYYY-MM-DD         Date to decode events for (default: today)
+    """
   end
 
   defp run_commit(message) do
