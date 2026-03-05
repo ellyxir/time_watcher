@@ -150,6 +150,12 @@ defmodule TimeWatcher.CLI do
         "--md", {date, opts} ->
           {date, [{:md, true} | opts]}
 
+        "--subtotals", {date, opts} ->
+          {date, [{:subtotals, true} | opts]}
+
+        "-s", {date, opts} ->
+          {date, [{:subtotals, true} | opts]}
+
         arg, {nil, opts} ->
           {arg, opts}
 
@@ -285,6 +291,7 @@ defmodule TimeWatcher.CLI do
     report_opts = build_report_opts(opts)
     stretches = Report.stretches(events, report_opts)
     markdown? = Keyword.get(opts, :md, false)
+    subtotals? = Keyword.get(opts, :subtotals, false)
 
     if stretches == [] do
       IO.puts("No activity recorded for #{date}")
@@ -296,10 +303,12 @@ defmodule TimeWatcher.CLI do
       if markdown? do
         IO.puts("## Activity for #{date}\n")
         IO.puts(Report.format_markdown(stretches))
+        print_subtotals(stretches, subtotals?, markdown?)
         IO.puts("\n**Total: #{hours}h #{minutes}m**")
       else
         IO.puts("Activity for #{date}:\n")
         IO.puts(Report.format(stretches))
+        print_subtotals(stretches, subtotals?, markdown?)
         IO.puts("\nTotal: #{hours}h #{minutes}m")
       end
     end
@@ -420,6 +429,7 @@ defmodule TimeWatcher.CLI do
       -v, --verbose      Print events as they are recorded
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --md               Output report in markdown format
+      -s, --subtotals    Show subtotals per project
       --days N           Show last N days of activity (including today)
       --from DATE        Start of date range (requires --to)
       --to DATE          End of date range (requires --from)
@@ -439,6 +449,7 @@ defmodule TimeWatcher.CLI do
 
     Options:
       --md               Output in markdown format
+      -s, --subtotals    Show subtotals per project
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --days N           Show last N days of activity (including today)
       --from DATE        Start of date range (requires --to)
@@ -624,6 +635,7 @@ defmodule TimeWatcher.CLI do
   defp run_multi_day_report(dates, opts) do
     report_opts = build_report_opts(opts)
     markdown? = Keyword.get(opts, :md, false)
+    subtotals? = Keyword.get(opts, :subtotals, false)
 
     day_results =
       dates
@@ -637,6 +649,8 @@ defmodule TimeWatcher.CLI do
     if day_results == [] do
       IO.puts("No activity recorded for the selected period")
     else
+      all_stretches = Enum.flat_map(day_results, fn {_date, stretches} -> stretches end)
+
       grand_total =
         day_results
         |> Enum.map(fn {_date, stretches} -> Report.total_duration(stretches) end)
@@ -646,6 +660,7 @@ defmodule TimeWatcher.CLI do
         print_day_report(date, stretches, markdown?)
       end)
 
+      print_subtotals(all_stretches, subtotals?, markdown?)
       print_grand_total(length(day_results), grand_total, markdown?)
     end
   end
@@ -687,6 +702,21 @@ defmodule TimeWatcher.CLI do
       nil -> []
       minutes -> [merge_window_minutes: minutes * 2]
     end
+  end
+
+  @spec print_subtotals([Report.stretch()], boolean(), boolean()) :: :ok
+  defp print_subtotals(_stretches, false, _markdown?), do: :ok
+
+  defp print_subtotals(stretches, true, true) do
+    subtotals = Report.subtotals(stretches)
+    IO.puts("\n### Subtotals\n")
+    IO.puts(Report.format_subtotals_markdown(subtotals))
+  end
+
+  defp print_subtotals(stretches, true, false) do
+    subtotals = Report.subtotals(stretches)
+    IO.puts("\nSubtotals:")
+    IO.puts(Report.format_subtotals(subtotals))
   end
 
   defp print_dir(dir) do

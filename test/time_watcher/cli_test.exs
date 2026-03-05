@@ -65,6 +65,26 @@ defmodule TimeWatcher.CLITest do
                {:report, "2026-02-25", [md: true]}
     end
 
+    test "parses 'report' with --subtotals flag" do
+      assert CLI.parse_args(["report", "--subtotals"]) ==
+               {:report, Date.to_string(Date.utc_today()), [subtotals: true]}
+    end
+
+    test "parses 'report' with -s flag" do
+      assert CLI.parse_args(["report", "-s"]) ==
+               {:report, Date.to_string(Date.utc_today()), [subtotals: true]}
+    end
+
+    test "parses 'report' with --subtotals and --md flags" do
+      assert CLI.parse_args(["report", "--subtotals", "--md"]) ==
+               {:report, Date.to_string(Date.utc_today()), [md: true, subtotals: true]}
+    end
+
+    test "parses 'report' with date and --subtotals flag" do
+      assert CLI.parse_args(["report", "2026-02-25", "--subtotals"]) ==
+               {:report, "2026-02-25", [subtotals: true]}
+    end
+
     test "parses 'report' with --days flag" do
       assert CLI.parse_args(["report", "--days", "7"]) ==
                {:report, :multi_day, [days: 7]}
