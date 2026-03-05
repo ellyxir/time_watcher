@@ -28,12 +28,14 @@ Reports show stretches of continuous activity. Events within the merge window (1
 nix profile install git+https://codeberg.org/ellyxir/time_watcher
 ```
 
-### From source
+### From release
+
+Download the latest release from [codeberg.org/ellyxir/time_watcher/releases](https://codeberg.org/ellyxir/time_watcher/releases).
 
 Requires Elixir 1.18+.
 
 ```sh
-git clone https://codeberg.org/ellyxir/time_watcher.git && cd time_watcher
+tar -xzf time_watcher-*.tar.gz && cd time_watcher
 mix deps.get
 MIX_ENV=prod mix release time_watcher
 ```
@@ -46,6 +48,14 @@ _build/prod/rel/time_watcher/bin/tw report
 
 # Or symlink it onto your PATH
 ln -s "$(pwd)/_build/prod/rel/time_watcher/bin/tw" ~/.local/bin/tw
+```
+
+### From source (git)
+
+```sh
+git clone https://codeberg.org/ellyxir/time_watcher.git && cd time_watcher
+mix deps.get
+MIX_ENV=prod mix release time_watcher
 ```
 
 ## Usage
