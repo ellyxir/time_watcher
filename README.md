@@ -1,5 +1,7 @@
 # TimeWatcher
 
+> **NOTE:** The primary repository is on [Codeberg](https://codeberg.org/ellyxir/time_watcher). Issues and pull requests should be submitted there.
+
 A git-based time tracker that watches your filesystem for changes and automatically records work activity. No cloud services needed — syncs across machines via git.
 
 ## Why
