@@ -99,12 +99,17 @@ tw report --from 2026-02-20 --to 2026-02-27
 # Markdown format (for pasting into notes, PRs, etc.)
 tw report --md
 
+# Show subtotals per project
+tw report --subtotals
+tw report -s
+
 # Custom cooldown (minutes of inactivity that still count as continuous work)
 tw report --cooldown 15
 
 # Combine options
 tw report --days 7 --md --cooldown 10
 tw report --from 2026-02-20 --to 2026-02-27 --md --cooldown 10
+tw report --days 7 --subtotals
 ```
 
 The default cooldown is 5 minutes — if you stop editing for more than 5 minutes, it's treated as a break. Use `--cooldown` to adjust this threshold.
@@ -119,6 +124,22 @@ Activity for 2026-02-25:
   09:12 - 10:45  my_app    (1h 33m)
   13:00 - 14:20  my_app    (1h 20m)
   14:30 - 15:10  docs_site (0h 40m)
+
+Total: 3h 33m
+```
+
+With `--subtotals`:
+
+```
+Activity for 2026-02-25:
+
+  09:12 - 10:45  my_app    (1h 33m)
+  13:00 - 14:20  my_app    (1h 20m)
+  14:30 - 15:10  docs_site (0h 40m)
+
+Subtotals:
+  docs_site: 0h 40m
+  my_app: 2h 53m
 
 Total: 3h 33m
 ```

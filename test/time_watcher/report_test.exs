@@ -196,6 +196,94 @@ defmodule TimeWatcher.ReportTest do
     end
   end
 
+  describe "subtotals/1" do
+    test "returns empty list for empty stretches" do
+      assert Report.subtotals([]) == []
+    end
+
+    test "returns single subtotal for single project" do
+      stretches = [
+        %{repo: "proj_a", start: 1_000_000, stop: 1_000_120}
+      ]
+
+      subtotals = Report.subtotals(stretches)
+
+      assert subtotals == [{"proj_a", 120}]
+    end
+
+    test "aggregates duration across multiple stretches for same project" do
+      stretches = [
+        %{repo: "proj_a", start: 1_000_000, stop: 1_000_120},
+        %{repo: "proj_a", start: 1_001_000, stop: 1_001_300}
+      ]
+
+      subtotals = Report.subtotals(stretches)
+
+      # 120 + 300 = 420
+      assert subtotals == [{"proj_a", 420}]
+    end
+
+    test "returns subtotals for multiple projects sorted by name" do
+      stretches = [
+        %{repo: "proj_b", start: 1_000_000, stop: 1_000_300},
+        %{repo: "proj_a", start: 1_000_100, stop: 1_000_220}
+      ]
+
+      subtotals = Report.subtotals(stretches)
+
+      assert subtotals == [{"proj_a", 120}, {"proj_b", 300}]
+    end
+
+    test "handles interleaved stretches from multiple projects" do
+      stretches = [
+        %{repo: "proj_a", start: 1_000_000, stop: 1_000_120},
+        %{repo: "proj_b", start: 1_000_060, stop: 1_000_180},
+        %{repo: "proj_a", start: 1_000_200, stop: 1_000_500}
+      ]
+
+      subtotals = Report.subtotals(stretches)
+
+      # proj_a: 120 + 300 = 420, proj_b: 120
+      assert subtotals == [{"proj_a", 420}, {"proj_b", 120}]
+    end
+  end
+
+  describe "format_subtotals/1" do
+    test "formats subtotals as human-readable lines" do
+      subtotals = [{"proj_a", 4800}, {"proj_b", 1800}]
+
+      output = Report.format_subtotals(subtotals)
+
+      assert output =~ "proj_a: 1h 20m"
+      assert output =~ "proj_b: 0h 30m"
+    end
+
+    test "formats empty subtotals as empty string" do
+      assert Report.format_subtotals([]) == ""
+    end
+  end
+
+  describe "format_subtotals_markdown/1" do
+    test "formats subtotals as markdown table" do
+      subtotals = [{"proj_a", 4800}, {"proj_b", 1800}]
+
+      output = Report.format_subtotals_markdown(subtotals)
+
+      assert output =~ "| Project | Duration |"
+      assert output =~ "|---------|----------|"
+      assert output =~ "| proj_a | 1h 20m |"
+      assert output =~ "| proj_b | 0h 30m |"
+    end
+
+    test "formats empty subtotals as empty table" do
+      output = Report.format_subtotals_markdown([])
+
+      assert output =~ "| Project | Duration |"
+      lines = String.split(output, "\n")
+      assert length(lines) == 2
+    end
+  end
+
   describe "format_markdown/1" do
     test "outputs markdown table with headers" do
       stretches = [

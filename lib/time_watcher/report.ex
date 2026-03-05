@@ -70,6 +70,51 @@ defmodule TimeWatcher.Report do
     end)
   end
 
+  @typedoc "A tuple of project name and total duration in seconds."
+  @type subtotal :: {String.t(), non_neg_integer()}
+
+  @doc """
+  Calculates total duration per project from stretches.
+
+  Returns a list of `{project_name, total_seconds}` tuples sorted alphabetically
+  by project name.
+  """
+  @spec subtotals([stretch()]) :: [subtotal()]
+  def subtotals(stretches) do
+    stretches
+    |> Enum.group_by(& &1.repo)
+    |> Enum.map(fn {repo, repo_stretches} -> {repo, total_duration(repo_stretches)} end)
+    |> Enum.sort_by(fn {repo, _} -> repo end)
+  end
+
+  @doc """
+  Formats subtotals as human-readable text lines.
+  """
+  @spec format_subtotals([subtotal()]) :: String.t()
+  def format_subtotals([]), do: ""
+
+  def format_subtotals(subtotals) do
+    Enum.map_join(subtotals, "\n", fn {repo, seconds} ->
+      "  #{repo}: #{format_duration(seconds)}"
+    end)
+  end
+
+  @doc """
+  Formats subtotals as a markdown table.
+  """
+  @spec format_subtotals_markdown([subtotal()]) :: String.t()
+  def format_subtotals_markdown(subtotals) do
+    header = "| Project | Duration |"
+    separator = "|---------|----------|"
+
+    rows =
+      Enum.map(subtotals, fn {repo, seconds} ->
+        "| #{repo} | #{format_duration(seconds)} |"
+      end)
+
+    Enum.join([header, separator | rows], "\n")
+  end
+
   @doc """
   Formats stretches as a markdown table.
   """
@@ -91,10 +136,14 @@ defmodule TimeWatcher.Report do
   defp format_stretch_parts(s) do
     start_time = DateTime.from_unix!(s.start) |> Calendar.strftime("%H:%M")
     stop_time = DateTime.from_unix!(s.stop) |> Calendar.strftime("%H:%M")
-    duration_seconds = duration(s)
-    hours = div(duration_seconds, 3600)
-    minutes = div(rem(duration_seconds, 3600), 60)
-    {start_time, stop_time, "#{hours}h #{minutes}m"}
+    {start_time, stop_time, format_duration(duration(s))}
+  end
+
+  @spec format_duration(non_neg_integer()) :: String.t()
+  defp format_duration(seconds) do
+    hours = div(seconds, 3600)
+    minutes = div(rem(seconds, 3600), 60)
+    "#{hours}h #{minutes}m"
   end
 
   @spec merge_events([Event.t()], String.t(), integer()) :: [stretch()]
