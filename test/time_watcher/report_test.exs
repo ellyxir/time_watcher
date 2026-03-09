@@ -441,4 +441,99 @@ defmodule TimeWatcher.ReportTest do
       refute Map.has_key?(result["proj"], ~D[2026-01-16])
     end
   end
+
+  describe "format_json/3" do
+    test "returns valid JSON with correct structure" do
+      # 2026-01-15 09:00 - 09:30 (30 min = 0.5h)
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-15])
+      result = Jason.decode!(json)
+
+      assert result["start_date"] == "2026-01-15"
+      assert result["end_date"] == "2026-01-15"
+      assert is_map(result["projects"])
+    end
+
+    test "includes project with days array and total_hours" do
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-15])
+      result = Jason.decode!(json)
+
+      project = result["projects"]["my_project"]
+      assert is_list(project["days"])
+      assert is_number(project["total_hours"])
+    end
+
+    test "formats days as date and hours objects" do
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-15])
+      result = Jason.decode!(json)
+
+      [day] = result["projects"]["my_project"]["days"]
+      assert day["date"] == "2026-01-15"
+      assert day["hours"] == 0.5
+    end
+
+    test "calculates correct total_hours across multiple days" do
+      stretches = [
+        # 2026-01-15: 30 min = 0.5h
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400},
+        # 2026-01-16: 60 min = 1.0h
+        %{repo: "my_project", start: 1_768_557_600, stop: 1_768_561_200}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-16])
+      result = Jason.decode!(json)
+
+      assert result["projects"]["my_project"]["total_hours"] == 1.5
+    end
+
+    test "sorts days chronologically" do
+      stretches = [
+        # Add in reverse order
+        %{repo: "my_project", start: 1_768_557_600, stop: 1_768_561_200},
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-16])
+      result = Jason.decode!(json)
+
+      days = result["projects"]["my_project"]["days"]
+      dates = Enum.map(days, & &1["date"])
+      assert dates == ["2026-01-15", "2026-01-16"]
+    end
+
+    test "handles multiple projects" do
+      stretches = [
+        %{repo: "proj_a", start: 1_768_467_600, stop: 1_768_469_400},
+        %{repo: "proj_b", start: 1_768_485_600, stop: 1_768_489_200}
+      ]
+
+      json = Report.format_json(stretches, ~D[2026-01-15], ~D[2026-01-15])
+      result = Jason.decode!(json)
+
+      assert Map.has_key?(result["projects"], "proj_a")
+      assert Map.has_key?(result["projects"], "proj_b")
+      assert result["projects"]["proj_a"]["total_hours"] == 0.5
+      assert result["projects"]["proj_b"]["total_hours"] == 1.0
+    end
+
+    test "returns empty projects map for empty stretches" do
+      json = Report.format_json([], ~D[2026-01-15], ~D[2026-01-15])
+      result = Jason.decode!(json)
+
+      assert result["projects"] == %{}
+      assert result["start_date"] == "2026-01-15"
+      assert result["end_date"] == "2026-01-15"
+    end
+  end
 end

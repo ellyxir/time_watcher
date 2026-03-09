@@ -153,6 +153,52 @@ defmodule TimeWatcher.Report do
   end
 
   @doc """
+  Formats stretches as JSON for time_invoice integration.
+
+  Returns a JSON string with the structure:
+
+      {
+        "start_date": "YYYY-MM-DD",
+        "end_date": "YYYY-MM-DD",
+        "projects": {
+          "project_name": {
+            "days": [{"date": "YYYY-MM-DD", "hours": 1.5}, ...],
+            "total_hours": 1.5
+          }
+        }
+      }
+
+  Days are sorted chronologically. Only days with actual activity are included.
+  """
+  @spec format_json([stretch()], Date.t(), Date.t()) :: String.t()
+  def format_json(stretches, start_date, end_date) do
+    project_hours = daily_project_hours(stretches)
+
+    projects =
+      project_hours
+      |> Enum.map(fn {project, date_hours} ->
+        days =
+          date_hours
+          |> Enum.sort_by(fn {date, _} -> date end)
+          |> Enum.map(fn {date, hours} ->
+            %{"date" => Date.to_string(date), "hours" => hours}
+          end)
+
+        total = date_hours |> Map.values() |> Enum.sum()
+
+        {project, %{"days" => days, "total_hours" => total}}
+      end)
+      |> Map.new()
+
+    %{
+      "start_date" => Date.to_string(start_date),
+      "end_date" => Date.to_string(end_date),
+      "projects" => projects
+    }
+    |> Jason.encode!()
+  end
+
+  @doc """
   Aggregates stretches into daily hours per project.
 
   Returns a map where keys are project names and values are maps of dates to
