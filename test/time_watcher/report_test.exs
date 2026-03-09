@@ -323,4 +323,122 @@ defmodule TimeWatcher.ReportTest do
       assert length(lines) == 2
     end
   end
+
+  describe "daily_project_hours/1" do
+    test "returns empty map for empty stretches" do
+      assert Report.daily_project_hours([]) == %{}
+    end
+
+    test "aggregates single stretch into project and date" do
+      # 2026-01-15 09:00:00 UTC to 09:30:00 UTC (30 min = 0.5 hours)
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result == %{
+               "my_project" => %{
+                 ~D[2026-01-15] => 0.5
+               }
+             }
+    end
+
+    test "aggregates multiple stretches on same day for same project" do
+      # 2026-01-15 09:00 - 09:30 (30 min) and 14:00 - 15:00 (60 min) = 1.5 hours
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400},
+        %{repo: "my_project", start: 1_768_485_600, stop: 1_768_489_200}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result == %{
+               "my_project" => %{
+                 ~D[2026-01-15] => 1.5
+               }
+             }
+    end
+
+    test "separates hours by date for same project" do
+      # 2026-01-15 09:00 - 09:30 (30 min = 0.5h)
+      # 2026-01-16 10:00 - 11:00 (60 min = 1.0h)
+      stretches = [
+        %{repo: "my_project", start: 1_768_467_600, stop: 1_768_469_400},
+        %{repo: "my_project", start: 1_768_557_600, stop: 1_768_561_200}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result == %{
+               "my_project" => %{
+                 ~D[2026-01-15] => 0.5,
+                 ~D[2026-01-16] => 1.0
+               }
+             }
+    end
+
+    test "separates hours by project" do
+      # Same day, different projects
+      # proj_a: 30 min = 0.5h, proj_b: 60 min = 1.0h
+      stretches = [
+        %{repo: "proj_a", start: 1_768_467_600, stop: 1_768_469_400},
+        %{repo: "proj_b", start: 1_768_485_600, stop: 1_768_489_200}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result == %{
+               "proj_a" => %{~D[2026-01-15] => 0.5},
+               "proj_b" => %{~D[2026-01-15] => 1.0}
+             }
+    end
+
+    test "handles multiple projects across multiple days" do
+      stretches = [
+        # proj_a: 2026-01-15 09:00 - 09:30, 30 min
+        %{repo: "proj_a", start: 1_768_467_600, stop: 1_768_469_400},
+        # proj_b: 2026-01-15 14:00 - 15:00, 60 min
+        %{repo: "proj_b", start: 1_768_485_600, stop: 1_768_489_200},
+        # proj_a: 2026-01-16 10:00 - 11:30, 90 min
+        %{repo: "proj_a", start: 1_768_557_600, stop: 1_768_563_000}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result == %{
+               "proj_a" => %{
+                 ~D[2026-01-15] => 0.5,
+                 ~D[2026-01-16] => 1.5
+               },
+               "proj_b" => %{
+                 ~D[2026-01-15] => 1.0
+               }
+             }
+    end
+
+    test "converts seconds to decimal hours accurately" do
+      # 2026-01-15 09:00 - 10:45, 1 hour 45 minutes = 6300 seconds = 1.75 hours
+      stretches = [
+        %{repo: "proj", start: 1_768_467_600, stop: 1_768_473_900}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert result["proj"][~D[2026-01-15]] == 1.75
+    end
+
+    test "uses start timestamp to determine date" do
+      # Stretch starts at 2026-01-15 23:30 UTC and ends at 2026-01-16 00:30 UTC
+      # Should be attributed to 2026-01-15
+      stretches = [
+        %{repo: "proj", start: 1_768_519_800, stop: 1_768_523_400}
+      ]
+
+      result = Report.daily_project_hours(stretches)
+
+      assert Map.has_key?(result["proj"], ~D[2026-01-15])
+      refute Map.has_key?(result["proj"], ~D[2026-01-16])
+    end
+  end
 end

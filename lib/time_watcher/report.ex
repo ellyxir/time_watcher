@@ -73,6 +73,12 @@ defmodule TimeWatcher.Report do
   @typedoc "A tuple of project name and total duration in seconds."
   @type subtotal :: {String.t(), non_neg_integer()}
 
+  @typedoc "A map of dates to hours worked (as decimal)."
+  @type daily_hours :: %{Date.t() => float()}
+
+  @typedoc "A map of project names to their daily hours."
+  @type project_daily_hours :: %{String.t() => daily_hours()}
+
   @doc """
   Calculates total duration per project from stretches.
 
@@ -144,6 +150,31 @@ defmodule TimeWatcher.Report do
     hours = div(seconds, 3600)
     minutes = div(rem(seconds, 3600), 60)
     "#{hours}h #{minutes}m"
+  end
+
+  @doc """
+  Aggregates stretches into daily hours per project.
+
+  Returns a map where keys are project names and values are maps of dates to
+  decimal hours. Only includes days with actual activity.
+
+  Hours are calculated as decimals (e.g., 90 minutes = 1.5 hours).
+  The date is determined by the stretch's start timestamp in UTC.
+  """
+  @spec daily_project_hours([stretch()]) :: project_daily_hours()
+  def daily_project_hours([]), do: %{}
+
+  def daily_project_hours(stretches) do
+    stretches
+    |> Enum.reduce(%{}, fn stretch, acc ->
+      date = DateTime.from_unix!(stretch.start) |> DateTime.to_date()
+      hours = duration(stretch) / 3600.0
+
+      acc
+      |> Map.update(stretch.repo, %{date => hours}, fn dates ->
+        Map.update(dates, date, hours, &(&1 + hours))
+      end)
+    end)
   end
 
   @spec merge_events([Event.t()], String.t(), integer()) :: [stretch()]
