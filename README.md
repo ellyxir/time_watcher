@@ -118,6 +118,10 @@ tw report -s
 # Custom cooldown (minutes of inactivity that still count as continuous work)
 tw report --cooldown 15
 
+# JSON output (for piping to [time_invoice](https://codeberg.org/ellyxir/time_invoice) or other tools)
+tw report --json
+tw report --from 2026-02-20 --to 2026-02-27 --json
+
 # Combine options
 tw report --days 7 --md --cooldown 10
 tw report --from 2026-02-20 --to 2026-02-27 --md --cooldown 10
