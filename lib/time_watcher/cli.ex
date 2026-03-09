@@ -150,6 +150,9 @@ defmodule TimeWatcher.CLI do
         "--md", {date, opts} ->
           {date, [{:md, true} | opts]}
 
+        "--json", {date, opts} ->
+          {date, [{:json, true} | opts]}
+
         "--subtotals", {date, opts} ->
           {date, [{:subtotals, true} | opts]}
 
@@ -179,11 +182,14 @@ defmodule TimeWatcher.CLI do
     has_from = Keyword.has_key?(opts, :from)
     has_to = Keyword.has_key?(opts, :to)
     has_days = Keyword.has_key?(opts, :days)
+    has_json = Keyword.get(opts, :json, false)
+    has_md = Keyword.get(opts, :md, false)
 
     # Apply config cooldown if no CLI cooldown was provided
     opts = apply_config_cooldown(opts)
 
     cond do
+      has_json and has_md -> {:error, "--json and --md cannot be used together"}
       has_from or has_to -> validate_date_range_args(date, opts, has_from, has_to, has_days)
       has_days -> validate_days_args(date, opts)
       true -> {date || Date.to_string(Date.utc_today()), opts}

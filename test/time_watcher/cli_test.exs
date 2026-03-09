@@ -393,6 +393,45 @@ defmodule TimeWatcher.CLITest do
     test "parses 'decode -h'" do
       assert CLI.parse_args(["decode", "-h"]) == {:help, :decode}
     end
+
+    test "parses 'report' with --json flag" do
+      assert CLI.parse_args(["report", "--json"]) ==
+               {:report, Date.to_string(Date.utc_today()), [json: true]}
+    end
+
+    test "parses 'report' with date and --json flag" do
+      assert CLI.parse_args(["report", "2026-02-25", "--json"]) ==
+               {:report, "2026-02-25", [json: true]}
+    end
+
+    test "parses 'report' with --json and --cooldown flags" do
+      assert CLI.parse_args(["report", "--json", "--cooldown", "15"]) ==
+               {:report, Date.to_string(Date.utc_today()), [cooldown: 15, json: true]}
+    end
+
+    test "parses 'report' with --days and --json flags" do
+      assert CLI.parse_args(["report", "--days", "7", "--json"]) ==
+               {:report, :multi_day, [json: true, days: 7]}
+    end
+
+    test "parses 'report' with --from, --to, and --json flags" do
+      assert {:report, :date_range, opts} =
+               CLI.parse_args(["report", "--from", "2026-02-20", "--to", "2026-02-27", "--json"])
+
+      assert Keyword.get(opts, :from) == "2026-02-20"
+      assert Keyword.get(opts, :to) == "2026-02-27"
+      assert Keyword.get(opts, :json) == true
+    end
+
+    test "report --json and --md together returns error" do
+      assert CLI.parse_args(["report", "--json", "--md"]) ==
+               {:error, "--json and --md cannot be used together"}
+    end
+
+    test "report --md and --json together returns error" do
+      assert CLI.parse_args(["report", "--md", "--json"]) ==
+               {:error, "--json and --md cannot be used together"}
+    end
   end
 
   describe "version/0" do
