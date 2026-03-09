@@ -296,27 +296,34 @@ defmodule TimeWatcher.CLI do
     events = Storage.load_events(date)
     report_opts = build_report_opts(opts)
     stretches = Report.stretches(events, report_opts)
+    json? = Keyword.get(opts, :json, false)
     markdown? = Keyword.get(opts, :md, false)
     subtotals? = Keyword.get(opts, :subtotals, false)
 
-    if stretches == [] do
-      IO.puts("No activity recorded for #{date}")
-    else
-      total_seconds = Report.total_duration(stretches)
-      hours = div(total_seconds, 3600)
-      minutes = div(rem(total_seconds, 3600), 60)
+    cond do
+      json? ->
+        date_obj = Date.from_iso8601!(date)
+        IO.puts(Report.format_json(stretches, date_obj, date_obj))
 
-      if markdown? do
-        IO.puts("## Activity for #{date}\n")
-        IO.puts(Report.format_markdown(stretches))
-        print_subtotals(stretches, subtotals?, markdown?)
-        IO.puts("\n**Total: #{hours}h #{minutes}m**")
-      else
-        IO.puts("Activity for #{date}:\n")
-        IO.puts(Report.format(stretches))
-        print_subtotals(stretches, subtotals?, markdown?)
-        IO.puts("\nTotal: #{hours}h #{minutes}m")
-      end
+      stretches == [] ->
+        IO.puts("No activity recorded for #{date}")
+
+      true ->
+        total_seconds = Report.total_duration(stretches)
+        hours = div(total_seconds, 3600)
+        minutes = div(rem(total_seconds, 3600), 60)
+
+        if markdown? do
+          IO.puts("## Activity for #{date}\n")
+          IO.puts(Report.format_markdown(stretches))
+          print_subtotals(stretches, subtotals?, markdown?)
+          IO.puts("\n**Total: #{hours}h #{minutes}m**")
+        else
+          IO.puts("Activity for #{date}:\n")
+          IO.puts(Report.format(stretches))
+          print_subtotals(stretches, subtotals?, markdown?)
+          IO.puts("\nTotal: #{hours}h #{minutes}m")
+        end
     end
   end
 
@@ -435,6 +442,7 @@ defmodule TimeWatcher.CLI do
       -v, --verbose      Print events as they are recorded
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --md               Output report in markdown format
+      --json             Output report as JSON (for time_invoice)
       -s, --subtotals    Show subtotals per project
       --days N           Show last N days of activity (including today)
       --from DATE        Start of date range (requires --to)
@@ -455,6 +463,7 @@ defmodule TimeWatcher.CLI do
 
     Options:
       --md               Output in markdown format
+      --json             Output as JSON (for time_invoice)
       -s, --subtotals    Show subtotals per project
       --cooldown N       Minutes of inactivity to count as continuous (default: 5)
       --days N           Show last N days of activity (including today)
@@ -640,6 +649,7 @@ defmodule TimeWatcher.CLI do
   @spec run_multi_day_report([String.t()], keyword()) :: :ok
   defp run_multi_day_report(dates, opts) do
     report_opts = build_report_opts(opts)
+    json? = Keyword.get(opts, :json, false)
     markdown? = Keyword.get(opts, :md, false)
     subtotals? = Keyword.get(opts, :subtotals, false)
 
@@ -652,22 +662,29 @@ defmodule TimeWatcher.CLI do
       end)
       |> Enum.reject(fn {_date, stretches} -> stretches == [] end)
 
-    if day_results == [] do
-      IO.puts("No activity recorded for the selected period")
-    else
-      all_stretches = Enum.flat_map(day_results, fn {_date, stretches} -> stretches end)
+    all_stretches = Enum.flat_map(day_results, fn {_date, stretches} -> stretches end)
 
-      grand_total =
-        day_results
-        |> Enum.map(fn {_date, stretches} -> Report.total_duration(stretches) end)
-        |> Enum.sum()
+    cond do
+      json? ->
+        start_date = Date.from_iso8601!(List.first(dates))
+        end_date = Date.from_iso8601!(List.last(dates))
+        IO.puts(Report.format_json(all_stretches, start_date, end_date))
 
-      Enum.each(day_results, fn {date, stretches} ->
-        print_day_report(date, stretches, markdown?)
-      end)
+      day_results == [] ->
+        IO.puts("No activity recorded for the selected period")
 
-      print_subtotals(all_stretches, subtotals?, markdown?)
-      print_grand_total(length(day_results), grand_total, markdown?)
+      true ->
+        grand_total =
+          day_results
+          |> Enum.map(fn {_date, stretches} -> Report.total_duration(stretches) end)
+          |> Enum.sum()
+
+        Enum.each(day_results, fn {date, stretches} ->
+          print_day_report(date, stretches, markdown?)
+        end)
+
+        print_subtotals(all_stretches, subtotals?, markdown?)
+        print_grand_total(length(day_results), grand_total, markdown?)
     end
   end
 
