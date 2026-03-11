@@ -20,12 +20,12 @@ defmodule TimeWatcher.Decoder do
   end
 
   @doc """
-  Decodes an event by looking up its hashed_path in the hash map.
+  Decodes an event by looking up its path_id in the hash map.
   Sets decoded_path if found, otherwise leaves it as nil.
   """
   @spec decode_event(Event.t(), hash_map()) :: Event.t()
   def decode_event(%Event{} = event, hash_map) do
-    decoded_path = Map.get(hash_map, event.hashed_path)
+    decoded_path = Map.get(hash_map, event.path_id)
     %{event | decoded_path: decoded_path}
   end
 

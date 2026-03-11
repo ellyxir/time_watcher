@@ -37,14 +37,14 @@ defmodule TimeWatcher.CLIIntegrationTest do
       event1 = %Event{
         timestamp: base_time,
         repo: "my_app",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: base_time + 120,
         repo: "my_app",
-        hashed_path: "def",
+        path_id: "def",
         event_type: :modified
       }
 
@@ -69,14 +69,14 @@ defmodule TimeWatcher.CLIIntegrationTest do
       event1 = %Event{
         timestamp: base_time,
         repo: "my_app",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: base_time + 120,
         repo: "my_app",
-        hashed_path: "def",
+        path_id: "def",
         event_type: :modified
       }
 
@@ -104,14 +104,14 @@ defmodule TimeWatcher.CLIIntegrationTest do
       event1 = %Event{
         timestamp: base_time,
         repo: "my_app",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: base_time + 480,
         repo: "my_app",
-        hashed_path: "def",
+        path_id: "def",
         event_type: :modified
       }
 
@@ -144,35 +144,35 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each repo needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: base_time, repo: "app_one", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: base_time, repo: "app_one", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: base_time + 60,
           repo: "app_one",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 120,
           repo: "app_two",
-          hashed_path: "b1",
+          path_id: "b1",
           event_type: :created
         },
         %Event{
           timestamp: base_time + 180,
           repo: "app_two",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 240,
           repo: "app_three",
-          hashed_path: "c1",
+          path_id: "c1",
           event_type: :deleted
         },
         %Event{
           timestamp: base_time + 300,
           repo: "app_three",
-          hashed_path: "c2",
+          path_id: "c2",
           event_type: :modified
         }
       ]
@@ -199,18 +199,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{timestamp: day2_time, repo: "my_app", path_id: "b1", event_type: :modified},
         %Event{
           timestamp: day2_time + 120,
           repo: "my_app",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -237,18 +237,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{timestamp: day2_time, repo: "my_app", path_id: "b1", event_type: :modified},
         %Event{
           timestamp: day2_time + 120,
           repo: "my_app",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -277,18 +277,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day3_time, repo: "my_app", hashed_path: "c1", event_type: :modified},
+        %Event{timestamp: day3_time, repo: "my_app", path_id: "c1", event_type: :modified},
         %Event{
           timestamp: day3_time + 120,
           repo: "my_app",
-          hashed_path: "c2",
+          path_id: "c2",
           event_type: :modified
         }
       ]
@@ -325,14 +325,14 @@ defmodule TimeWatcher.CLIIntegrationTest do
       event1 = %Event{
         timestamp: day1_time,
         repo: "my_app",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: day1_time + 480,
         repo: "my_app",
-        hashed_path: "def",
+        path_id: "def",
         event_type: :modified
       }
 
@@ -360,18 +360,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{timestamp: day2_time, repo: "my_app", path_id: "b1", event_type: :modified},
         %Event{
           timestamp: day2_time + 120,
           repo: "my_app",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -398,18 +398,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day2_time, repo: "my_app", hashed_path: "b1", event_type: :modified},
+        %Event{timestamp: day2_time, repo: "my_app", path_id: "b1", event_type: :modified},
         %Event{
           timestamp: day2_time + 120,
           repo: "my_app",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -438,18 +438,18 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Each day needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
-        %Event{timestamp: day3_time, repo: "my_app", hashed_path: "c1", event_type: :modified},
+        %Event{timestamp: day3_time, repo: "my_app", path_id: "c1", event_type: :modified},
         %Event{
           timestamp: day3_time + 120,
           repo: "my_app",
-          hashed_path: "c2",
+          path_id: "c2",
           event_type: :modified
         }
       ]
@@ -486,11 +486,11 @@ defmodule TimeWatcher.CLIIntegrationTest do
 
       # Need at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: day1_time, repo: "my_app", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: day1_time, repo: "my_app", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: day1_time + 120,
           repo: "my_app",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         }
       ]

@@ -67,7 +67,7 @@ defmodule TimeWatcher.DecoderTest do
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "test_repo",
-        hashed_path: hash_path(file),
+        path_id: hash_path(file),
         event_type: :modified
       }
 
@@ -82,7 +82,7 @@ defmodule TimeWatcher.DecoderTest do
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "test_repo",
-        hashed_path: "nonexistent_hash",
+        path_id: "nonexistent_hash",
         event_type: :modified
       }
 
@@ -105,13 +105,13 @@ defmodule TimeWatcher.DecoderTest do
         %Event{
           timestamp: 1_740_000_000,
           repo: "test_repo",
-          hashed_path: hash_path(file1),
+          path_id: hash_path(file1),
           event_type: :modified
         },
         %Event{
           timestamp: 1_740_000_001,
           repo: "test_repo",
-          hashed_path: hash_path(file2),
+          path_id: hash_path(file2),
           event_type: :created
         }
       ]

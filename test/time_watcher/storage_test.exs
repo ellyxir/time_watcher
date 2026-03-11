@@ -19,7 +19,7 @@ defmodule TimeWatcher.StorageTest do
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "my_repo",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
@@ -44,7 +44,7 @@ defmodule TimeWatcher.StorageTest do
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "my_repo",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
@@ -82,7 +82,7 @@ defmodule TimeWatcher.StorageTest do
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "my_repo",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
@@ -99,14 +99,14 @@ defmodule TimeWatcher.StorageTest do
       event1 = %Event{
         timestamp: 1_740_000_000,
         repo: "repo1",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: 1_740_000_001,
         repo: "repo2",
-        hashed_path: "def456",
+        path_id: "def456",
         event_type: :created
       }
 
@@ -130,7 +130,7 @@ defmodule TimeWatcher.StorageTest do
       event1 = %Event{
         timestamp: 1_740_000_000,
         repo: "repo1",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
@@ -138,7 +138,7 @@ defmodule TimeWatcher.StorageTest do
       event2 = %Event{
         timestamp: 1_740_086_400,
         repo: "repo2",
-        hashed_path: "def456",
+        path_id: "def456",
         event_type: :created
       }
 

@@ -289,7 +289,7 @@ defmodule TimeWatcher.Watcher do
     %Event{
       timestamp: now,
       repo: repo,
-      hashed_path: hash_path(path),
+      path_id: hash_path(path),
       event_type: map_event_type(events)
     }
   end
