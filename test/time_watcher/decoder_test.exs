@@ -78,11 +78,12 @@ defmodule TimeWatcher.DecoderTest do
 
     test "leaves decoded_path as nil when hash not found", %{repo_dir: repo_dir} do
       hash_map = Decoder.build_hash_map(repo_dir)
+      fake_hash = hash_path("/nonexistent/path/that/does/not/exist.ex")
 
       event = %Event{
         timestamp: 1_740_000_000,
         repo: "test_repo",
-        path_id: "nonexistent_hash",
+        path_id: fake_hash,
         event_type: :modified
       }
 
@@ -183,6 +184,38 @@ defmodule TimeWatcher.DecoderTest do
 
       assert Map.get(hash_map2, hash2) == file2
       assert Map.get(hash_map2, hash1) == nil
+    end
+  end
+
+  describe "hashed?/1" do
+    test "returns true for sha256 hex strings" do
+      hash = :crypto.hash(:sha256, "/some/path") |> Base.encode16(case: :lower)
+      assert Decoder.hashed?(hash)
+    end
+
+    test "returns false for file paths" do
+      refute Decoder.hashed?("/home/user/project/lib/foo.ex")
+    end
+
+    test "returns false for short hex strings" do
+      refute Decoder.hashed?("abc123")
+    end
+  end
+
+  describe "decode_event/2 with plaintext path_id" do
+    test "uses path_id directly as decoded_path for plaintext events", %{repo_dir: repo_dir} do
+      hash_map = Decoder.build_hash_map(repo_dir)
+
+      event = %Event{
+        timestamp: 1_740_000_000,
+        repo: "test_repo",
+        path_id: "/home/user/project/lib/foo.ex",
+        event_type: :modified
+      }
+
+      decoded = Decoder.decode_event(event, hash_map)
+
+      assert decoded.decoded_path == "/home/user/project/lib/foo.ex"
     end
   end
 

@@ -618,10 +618,16 @@ defmodule TimeWatcher.CLI do
         IO.puts("  [#{time}] #{event.event_type} #{path}")
       end)
 
+      plaintext_count = Enum.count(decoded_events, &(not Decoder.hashed?(&1.path_id)))
+      hashed_count = length(decoded_events) - plaintext_count
       decoded_count = Enum.count(decoded_events, & &1.decoded_path)
       total_count = length(decoded_events)
 
       IO.puts("\nDecoded #{decoded_count}/#{total_count} file paths")
+
+      if plaintext_count > 0 do
+        IO.puts("  #{plaintext_count} plaintext, #{hashed_count} hashed")
+      end
     end
   end
 
