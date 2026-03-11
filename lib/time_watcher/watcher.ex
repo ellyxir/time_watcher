@@ -68,6 +68,7 @@ defmodule TimeWatcher.Watcher do
     debounce_seconds = Keyword.get(opts, :debounce_seconds, @default_debounce_seconds)
     verbose = Keyword.get(opts, :verbose, false)
     ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
+    plaintext_paths = Keyword.get(opts, :plaintext_paths, false)
 
     # Filter out directories that would cause infinite loops
     safe_dirs =
@@ -105,7 +106,8 @@ defmodule TimeWatcher.Watcher do
        last_event_at: %{},
        watcher_pids: watcher_pids,
        verbose: verbose,
-       ignore_patterns: ignore_patterns
+       ignore_patterns: ignore_patterns,
+       plaintext_paths: plaintext_paths
      }}
   end
 
@@ -178,7 +180,7 @@ defmodule TimeWatcher.Watcher do
     repo = find_repo(path, state.dir_repo_map)
 
     if repo && !ignored_path?(path, state.ignore_patterns) && !debounced?(path, now, state) do
-      event = build_event(path, events, repo, now)
+      event = build_event(path, events, repo, now, state.plaintext_paths)
       save_event(event, path, state)
       {:noreply, %{state | last_event_at: Map.put(state.last_event_at, path, now)}}
     else
@@ -285,11 +287,11 @@ defmodule TimeWatcher.Watcher do
     |> then(&Regex.compile!("^#{&1}$"))
   end
 
-  defp build_event(path, events, repo, now) do
+  defp build_event(path, events, repo, now, plaintext_paths) do
     %Event{
       timestamp: now,
       repo: repo,
-      path_id: hash_path(path),
+      path_id: if(plaintext_paths, do: path, else: hash_path(path)),
       event_type: map_event_type(events)
     }
   end

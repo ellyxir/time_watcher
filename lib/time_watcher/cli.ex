@@ -332,11 +332,14 @@ defmodule TimeWatcher.CLI do
     dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
     ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
 
+    plaintext_paths = Application.get_env(:time_watcher, :plaintext_paths, false)
+
     daemon_opts = [
       dirs: dirs,
       verbose: verbose,
       dirs_from_config: dirs_from_config,
-      ignore_patterns: ignore_patterns
+      ignore_patterns: ignore_patterns,
+      plaintext_paths: plaintext_paths
     ]
 
     case Daemon.start_daemon(daemon_opts) do
