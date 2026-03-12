@@ -4,17 +4,18 @@ set -e
 SELF=$(readlink "$0" || true)
 if [ -z "$SELF" ]; then SELF="$0"; fi
 RELEASE_ROOT="$(cd "$(dirname "$SELF")/.." && pwd -P)"
+EPMD="$(echo "$RELEASE_ROOT"/erts-*/bin/epmd)"
 
 # Ensure epmd is running for distributed Erlang
 ensure_epmd() {
   if ! pgrep -x epmd > /dev/null 2>&1; then
-    "$RELEASE_ROOT/erts-"*/bin/epmd -daemon 2>/dev/null || epmd -daemon 2>/dev/null || true
+    "$EPMD" -daemon 2>/dev/null || epmd -daemon 2>/dev/null || true
   fi
 }
 
 # Check if daemon is running by looking for tw_watcher in epmd names
 daemon_running() {
-  epmd -names 2>/dev/null | grep -q "name tw_watcher"
+  "$EPMD" -names 2>/dev/null | grep -q "name tw_watcher"
 }
 
 # Encode args as newline-delimited env var for Elixir to parse
@@ -64,7 +65,9 @@ if [ "$COMMAND" = "watch" ]; then
       # Get startup message from Elixir (handles config path detection)
       "$RELEASE_ROOT/bin/time_watcher" eval 'TimeWatcher.StartupMessage.print_startup()'
     else
-      echo "Error: Failed to start daemon" >&2
+      echo "Error: Failed to start daemon." >&2
+      echo "If a daemon is already running, use 'tw watch <dir>' to add directories to it." >&2
+      echo "Check logs at $RELEASE_ROOT/tmp/log/ for details." >&2
       exit 1
     fi
   fi

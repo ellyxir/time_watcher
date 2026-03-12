@@ -46,8 +46,8 @@ defmodule TimeWatcher.Application do
 
   @spec daemon_already_running_error() :: no_return()
   defp daemon_already_running_error do
-    IO.puts("Error: Another daemon is already running.")
-    IO.puts("Use 'tw watch <dir>' to add directories to the running daemon.")
+    IO.puts(:stderr, "Daemon is already running.")
+    IO.puts(:stderr, "Use 'tw watch <dir>' to add directories to the running daemon.")
     System.halt(1)
   end
 
