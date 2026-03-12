@@ -439,7 +439,7 @@ defmodule TimeWatcher.CLI do
       tw commit [-m "message"]                Commit event data to git
       tw reset [YYYY-MM-DD]                   Delete events for date (default: today)
       tw reset --all                          Delete all events
-      tw decode <repo-path> [YYYY-MM-DD]      Show events with decoded file paths
+      tw decode <path> [YYYY-MM-DD]           Show events with decoded file paths
 
     Options:
       -v, --verbose      Print events as they are recorded
@@ -557,10 +557,10 @@ defmodule TimeWatcher.CLI do
     tw decode - show events with decoded file paths
 
     Usage:
-      tw decode <repo-path> [YYYY-MM-DD]
+      tw decode <path> [YYYY-MM-DD]
 
     Arguments:
-      repo-path          Path to the git repository (required)
+      path               Path to the watched directory (required)
       YYYY-MM-DD         Date to decode events for (default: today)
     """
   end

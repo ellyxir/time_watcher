@@ -201,7 +201,7 @@ tw commit -m "remove feb 25 data"
 By default, file paths are stored as hashes for privacy. On the same machine where events were recorded, you can decode them back to actual paths. If `plaintext_paths` is enabled, the decode command shows the stored paths directly.
 
 ```sh
-# Decode today's events for a repo
+# Decode today's events for a watched directory
 tw decode ~/projects/my_app
 
 # Decode events for a specific date
@@ -220,7 +220,7 @@ Events for my_app on 2026-02-25:
 Decoded 3/3 file paths
 ```
 
-This works by hashing all files in the repo directory and matching against the stored hashes. Files that have been deleted or renamed since the event won't be decoded. Note: decoding can be slow on large repositories since every file must be hashed.
+This works by hashing all files in the watched directory and matching against the stored hashes. Files that have been deleted or renamed since the event won't be decoded. Note: decoding can be slow on large repositories since every file must be hashed.
 
 ### Version
 
