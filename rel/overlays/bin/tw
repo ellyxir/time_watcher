@@ -64,7 +64,9 @@ if [ "$COMMAND" = "watch" ]; then
       # Get startup message from Elixir (handles config path detection)
       "$RELEASE_ROOT/bin/time_watcher" eval 'TimeWatcher.StartupMessage.print_startup()'
     else
-      echo "Error: Failed to start daemon" >&2
+      echo "Error: Failed to start daemon." >&2
+      echo "If a daemon is already running, use 'tw watch <dir>' to add directories to it." >&2
+      echo "Check logs at $RELEASE_ROOT/tmp/log/ for details." >&2
       exit 1
     fi
   fi
