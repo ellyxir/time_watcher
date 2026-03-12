@@ -34,7 +34,7 @@ nix profile install git+https://codeberg.org/ellyxir/time_watcher
 
 Download the latest release from [codeberg.org/ellyxir/time_watcher/releases](https://codeberg.org/ellyxir/time_watcher/releases).
 
-Requires Elixir 1.18+.
+Requires Elixir 1.19+ and OTP 28+ (Node.start/2 API changed in OTP 28).
 
 ```sh
 tar -xzf time_watcher-*.tar.gz && cd time_watcher
