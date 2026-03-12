@@ -94,7 +94,7 @@ defmodule TimeWatcher.Client do
       cookie = Node.ensure_cookie()
       node_name = Node.client_node_name()
 
-      case Elixir.Node.start(node_name, :shortnames) do
+      case Elixir.Node.start(node_name, name_domain: :shortnames) do
         {:ok, _pid} ->
           Elixir.Node.set_cookie(cookie)
           :ok

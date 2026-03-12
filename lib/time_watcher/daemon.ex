@@ -83,7 +83,7 @@ defmodule TimeWatcher.Daemon do
     cookie = Node.ensure_cookie()
     daemon_node = Node.daemon_node_name()
 
-    case Elixir.Node.start(daemon_node, :shortnames) do
+    case Elixir.Node.start(daemon_node, name_domain: :shortnames) do
       {:ok, _pid} ->
         Elixir.Node.set_cookie(cookie)
         :ok
@@ -100,7 +100,7 @@ defmodule TimeWatcher.Daemon do
       cookie = Node.ensure_cookie()
       temp_node = Node.client_node_name()
 
-      case Elixir.Node.start(temp_node, :shortnames) do
+      case Elixir.Node.start(temp_node, name_domain: :shortnames) do
         {:ok, _pid} ->
           Elixir.Node.set_cookie(cookie)
           :ok

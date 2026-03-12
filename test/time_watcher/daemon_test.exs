@@ -28,7 +28,7 @@ defmodule TimeWatcher.DaemonTest do
       cookie = TimeWatcher.Node.ensure_cookie()
       daemon_name = TimeWatcher.Node.daemon_node_name()
 
-      case Node.start(daemon_name, :shortnames) do
+      case Node.start(daemon_name, name_domain: :shortnames) do
         {:ok, _} ->
           Node.set_cookie(cookie)
 
