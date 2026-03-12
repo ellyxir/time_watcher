@@ -14,7 +14,7 @@ ensure_epmd() {
 
 # Check if daemon is running by looking for tw_watcher in epmd names
 daemon_running() {
-  epmd -names 2>/dev/null | grep -q "name tw_watcher"
+  "$RELEASE_ROOT/erts-"*/bin/epmd -names 2>/dev/null | grep -q "name tw_watcher"
 }
 
 # Encode args as newline-delimited env var for Elixir to parse
