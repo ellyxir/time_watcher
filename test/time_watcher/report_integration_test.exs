@@ -23,23 +23,23 @@ defmodule TimeWatcher.ReportIntegrationTest do
 
       # Need at least 2 events per repo to produce a stretch
       events = [
-        %Event{timestamp: base_time, repo: "project_a", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: base_time, repo: "project_a", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: base_time + 120,
           repo: "project_a",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 3600,
           repo: "project_b",
-          hashed_path: "b1",
+          path_id: "b1",
           event_type: :created
         },
         %Event{
           timestamp: base_time + 3720,
           repo: "project_b",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -67,35 +67,35 @@ defmodule TimeWatcher.ReportIntegrationTest do
       # Create interleaved events across 3 repos
       # Each repo needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: base_time, repo: "repo_1", hashed_path: "h1", event_type: :modified},
+        %Event{timestamp: base_time, repo: "repo_1", path_id: "h1", event_type: :modified},
         %Event{
           timestamp: base_time + 60,
           repo: "repo_2",
-          hashed_path: "h2",
+          path_id: "h2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 120,
           repo: "repo_3",
-          hashed_path: "h3",
+          path_id: "h3",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 180,
           repo: "repo_1",
-          hashed_path: "h4",
+          path_id: "h4",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 240,
           repo: "repo_2",
-          hashed_path: "h5",
+          path_id: "h5",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 300,
           repo: "repo_3",
-          hashed_path: "h6",
+          path_id: "h6",
           event_type: :modified
         }
       ]
@@ -137,7 +137,7 @@ defmodule TimeWatcher.ReportIntegrationTest do
       valid_event = %Event{
         timestamp: base_time,
         repo: "valid_repo",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
@@ -154,9 +154,9 @@ defmodule TimeWatcher.ReportIntegrationTest do
       date = timestamp_to_date(base_time)
 
       events = [
-        %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :created},
-        %Event{timestamp: base_time + 60, repo: "repo", hashed_path: "b", event_type: :modified},
-        %Event{timestamp: base_time + 120, repo: "repo", hashed_path: "c", event_type: :deleted}
+        %Event{timestamp: base_time, repo: "repo", path_id: "a", event_type: :created},
+        %Event{timestamp: base_time + 60, repo: "repo", path_id: "b", event_type: :modified},
+        %Event{timestamp: base_time + 120, repo: "repo", path_id: "c", event_type: :deleted}
       ]
 
       Enum.each(events, &Storage.save_event(&1, data_dir))
@@ -181,23 +181,23 @@ defmodule TimeWatcher.ReportIntegrationTest do
 
       # Each repo needs at least 2 events to produce a stretch
       events = [
-        %Event{timestamp: base_time, repo: "my_project", hashed_path: "a", event_type: :modified},
+        %Event{timestamp: base_time, repo: "my_project", path_id: "a", event_type: :modified},
         %Event{
           timestamp: base_time + 120,
           repo: "my_project",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 3600,
           repo: "other_project",
-          hashed_path: "b",
+          path_id: "b",
           event_type: :created
         },
         %Event{
           timestamp: base_time + 3720,
           repo: "other_project",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]
@@ -230,8 +230,8 @@ defmodule TimeWatcher.ReportIntegrationTest do
       # Default 10-min merge window: too far apart, no stretch
       # 30-min merge window: within range, events merge into 1 stretch
       events = [
-        %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
-        %Event{timestamp: base_time + 720, repo: "repo", hashed_path: "b", event_type: :modified}
+        %Event{timestamp: base_time, repo: "repo", path_id: "a", event_type: :modified},
+        %Event{timestamp: base_time + 720, repo: "repo", path_id: "b", event_type: :modified}
       ]
 
       Enum.each(events, &Storage.save_event(&1, data_dir))
@@ -257,8 +257,8 @@ defmodule TimeWatcher.ReportIntegrationTest do
       # Default 10-min merge window: within range, merge into 1 stretch
       # 4-min merge window: too far apart, no stretch
       events = [
-        %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
-        %Event{timestamp: base_time + 360, repo: "repo", hashed_path: "b", event_type: :modified}
+        %Event{timestamp: base_time, repo: "repo", path_id: "a", event_type: :modified},
+        %Event{timestamp: base_time + 360, repo: "repo", path_id: "b", event_type: :modified}
       ]
 
       Enum.each(events, &Storage.save_event(&1, data_dir))
@@ -282,8 +282,8 @@ defmodule TimeWatcher.ReportIntegrationTest do
 
       # Two events 5 minutes apart = 5 min duration (actual time between events)
       events = [
-        %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified},
-        %Event{timestamp: base_time + 300, repo: "repo", hashed_path: "b", event_type: :modified}
+        %Event{timestamp: base_time, repo: "repo", path_id: "a", event_type: :modified},
+        %Event{timestamp: base_time + 300, repo: "repo", path_id: "b", event_type: :modified}
       ]
 
       Enum.each(events, &Storage.save_event(&1, data_dir))
@@ -300,7 +300,7 @@ defmodule TimeWatcher.ReportIntegrationTest do
       base_time = 1_736_935_200
       date = timestamp_to_date(base_time)
 
-      event = %Event{timestamp: base_time, repo: "repo", hashed_path: "a", event_type: :modified}
+      event = %Event{timestamp: base_time, repo: "repo", path_id: "a", event_type: :modified}
       Storage.save_event(event, data_dir)
 
       loaded = Storage.load_events(date, data_dir)
@@ -319,32 +319,32 @@ defmodule TimeWatcher.ReportIntegrationTest do
         %Event{
           timestamp: base_time + 7200,
           repo: "third",
-          hashed_path: "c1",
+          path_id: "c1",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 7260,
           repo: "third",
-          hashed_path: "c2",
+          path_id: "c2",
           event_type: :modified
         },
-        %Event{timestamp: base_time, repo: "first", hashed_path: "a1", event_type: :modified},
+        %Event{timestamp: base_time, repo: "first", path_id: "a1", event_type: :modified},
         %Event{
           timestamp: base_time + 60,
           repo: "first",
-          hashed_path: "a2",
+          path_id: "a2",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 3600,
           repo: "second",
-          hashed_path: "b1",
+          path_id: "b1",
           event_type: :modified
         },
         %Event{
           timestamp: base_time + 3660,
           repo: "second",
-          hashed_path: "b2",
+          path_id: "b2",
           event_type: :modified
         }
       ]

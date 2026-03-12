@@ -332,11 +332,14 @@ defmodule TimeWatcher.CLI do
     dirs_from_config = Keyword.get(opts, :dirs_from_config, false)
     ignore_patterns = Keyword.get(opts, :ignore_patterns, [])
 
+    plaintext_paths = Application.get_env(:time_watcher, :plaintext_paths, false)
+
     daemon_opts = [
       dirs: dirs,
       verbose: verbose,
       dirs_from_config: dirs_from_config,
-      ignore_patterns: ignore_patterns
+      ignore_patterns: ignore_patterns,
+      plaintext_paths: plaintext_paths
     ]
 
     case Daemon.start_daemon(daemon_opts) do
@@ -615,10 +618,16 @@ defmodule TimeWatcher.CLI do
         IO.puts("  [#{time}] #{event.event_type} #{path}")
       end)
 
+      plaintext_count = Enum.count(decoded_events, &(not Decoder.hashed?(&1.path_id)))
+      hashed_count = length(decoded_events) - plaintext_count
       decoded_count = Enum.count(decoded_events, & &1.decoded_path)
       total_count = length(decoded_events)
 
       IO.puts("\nDecoded #{decoded_count}/#{total_count} file paths")
+
+      if plaintext_count > 0 do
+        IO.puts("  #{plaintext_count} plaintext, #{hashed_count} hashed")
+      end
     end
   end
 

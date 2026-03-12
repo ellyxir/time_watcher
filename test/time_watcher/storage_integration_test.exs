@@ -46,7 +46,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
       event = %Event{
         timestamp: base_time,
         repo: "test_repo",
-        hashed_path: "abc123",
+        path_id: "abc123",
         event_type: :modified
       }
 
@@ -72,7 +72,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
           %Event{
             timestamp: base_time + i,
             repo: "repo_#{i}",
-            hashed_path: "hash_#{i}",
+            path_id: "hash_#{i}",
             event_type: :modified
           }
         end
@@ -96,14 +96,14 @@ defmodule TimeWatcher.StorageIntegrationTest do
       event1 = %Event{
         timestamp: time1,
         repo: "repo",
-        hashed_path: "a",
+        path_id: "a",
         event_type: :modified
       }
 
       event2 = %Event{
         timestamp: time2,
         repo: "repo",
-        hashed_path: "b",
+        path_id: "b",
         event_type: :modified
       }
 
@@ -129,14 +129,14 @@ defmodule TimeWatcher.StorageIntegrationTest do
         %Event{
           timestamp: base_time + 200,
           repo: "third",
-          hashed_path: "c",
+          path_id: "c",
           event_type: :modified
         },
-        %Event{timestamp: base_time, repo: "first", hashed_path: "a", event_type: :modified},
+        %Event{timestamp: base_time, repo: "first", path_id: "a", event_type: :modified},
         %Event{
           timestamp: base_time + 100,
           repo: "second",
-          hashed_path: "b",
+          path_id: "b",
           event_type: :modified
         }
       ]
@@ -182,7 +182,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
       event = %Event{
         timestamp: base_time,
         repo: "repo",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 
@@ -205,7 +205,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
         event = %Event{
           timestamp: base_time + i,
           repo: "repo",
-          hashed_path: "hash_#{i}",
+          path_id: "hash_#{i}",
           event_type: :modified
         }
 
@@ -231,7 +231,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
             event = %Event{
               timestamp: base_time + i,
               repo: "repo_#{i}",
-              hashed_path: "hash_#{i}",
+              path_id: "hash_#{i}",
               event_type: :modified
             }
 
@@ -260,7 +260,7 @@ defmodule TimeWatcher.StorageIntegrationTest do
       event = %Event{
         timestamp: base_time,
         repo: "repo",
-        hashed_path: "abc",
+        path_id: "abc",
         event_type: :modified
       }
 

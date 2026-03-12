@@ -7,7 +7,7 @@ defmodule TimeWatcher.ReportTest do
     %Event{
       timestamp: timestamp,
       repo: repo,
-      hashed_path: "abc",
+      path_id: "abc",
       event_type: :modified
     }
   end

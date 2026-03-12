@@ -18,7 +18,7 @@ Hope you find it helpful!
 2. **Report** — Run `tw report` to see your activity for the day. Events are grouped into stretches of continuous work per project.
 3. **Sync** — The data directory is a git repo. Push/pull to share activity across machines.
 
-Each file change creates an event with a timestamp, repo name, hashed file path, and event type. Rapid saves to the same file are debounced (1 event per minute), but editing different files produces separate events.
+Each file change creates an event with a timestamp, repo name, file path identifier, and event type. By default, file paths are SHA-256 hashed for privacy. You can disable hashing with the `plaintext_paths` config option (see [Configuration](#configuration-file)). Rapid saves to the same file are debounced (1 event per minute), but editing different files produces separate events.
 
 Reports show stretches of continuous activity. Events within the merge window (10 minutes by default) are grouped into the same stretch. The reported duration is the actual time between the first and last event in each stretch. A single isolated event doesn't produce a stretch since it can't establish a duration.
 
@@ -198,7 +198,7 @@ tw commit -m "remove feb 25 data"
 
 ### Decode file paths
 
-File paths are stored as hashes for privacy. On the same machine where events were recorded, you can decode them back to actual paths:
+By default, file paths are stored as hashes for privacy. On the same machine where events were recorded, you can decode them back to actual paths. If `plaintext_paths` is enabled, the decode command shows the stored paths directly.
 
 ```sh
 # Decode today's events for a repo
@@ -253,12 +253,12 @@ Each event file contains:
 {
   "timestamp": 1740000000,
   "repo": "my_app",
-  "hashed_path": "a1b2c3...",
+  "path_id": "a1b2c3...",
   "event_type": "modified"
 }
 ```
 
-File paths are SHA-256 hashed for privacy — the actual filenames you edit are never stored.
+By default, file paths are SHA-256 hashed for privacy — the actual filenames you edit are never stored. Set `plaintext_paths: true` in your config to store actual file paths instead.
 
 ### Syncing with git
 
@@ -294,6 +294,7 @@ TimeWatcher can be configured via a config file at `~/.config/time_watcher/confi
 - **verbose** — enable verbose event logging (requires `-v` flag to see output)
 - **cooldown** — default cooldown in minutes for reports
 - **ignore_patterns** — list of glob patterns for filenames to ignore (e.g., temp files created by editors or tools)
+- **plaintext_paths** — store actual file paths instead of SHA-256 hashes (default: `false`)
 
 ### Example config
 
@@ -304,7 +305,8 @@ config :time_watcher,
   dirs: ["~/projects/client_a", "~/projects/client_b"],
   verbose: false,
   cooldown: 10,
-  ignore_patterns: [".watchman-cookie-*", "*.swp", "*~"]
+  ignore_patterns: [".watchman-cookie-*", "*.swp", "*~"],
+  plaintext_paths: true
 ```
 
 The `ignore_patterns` option is useful for filtering out noise from tools that create temporary files. Common patterns:

@@ -24,6 +24,7 @@ defmodule TimeWatcher.Application do
     {dirs, verbose, dirs_from_config} = parse_watch_args()
     data_dir = Storage.data_dir()
     ignore_patterns = Application.get_env(:time_watcher, :ignore_patterns, [])
+    plaintext_paths = Application.get_env(:time_watcher, :plaintext_paths, false)
     File.mkdir_p!(data_dir)
 
     if verbose do
@@ -36,6 +37,7 @@ defmodule TimeWatcher.Application do
        data_dir: data_dir,
        verbose: verbose,
        ignore_patterns: ignore_patterns,
+       plaintext_paths: plaintext_paths,
        name: Watcher}
     ]
 

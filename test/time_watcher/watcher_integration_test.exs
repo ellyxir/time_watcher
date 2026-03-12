@@ -251,12 +251,43 @@ defmodule TimeWatcher.WatcherIntegrationTest do
       event = List.first(events)
 
       # Path should be hashed (64 hex characters = SHA256)
-      assert String.length(event.hashed_path) == 64
-      assert String.match?(event.hashed_path, ~r/^[0-9a-f]+$/)
+      assert String.length(event.path_id) == 64
+      assert String.match?(event.path_id, ~r/^[0-9a-f]+$/)
 
       # Should NOT contain the actual filename
-      refute event.hashed_path =~ "secret"
-      refute event.hashed_path =~ "credentials"
+      refute event.path_id =~ "secret"
+      refute event.path_id =~ "credentials"
+
+      GenServer.stop(pid)
+    end
+
+    test "stores plaintext path when plaintext_paths is true", %{
+      data_dir: data_dir,
+      watch_dir: watch_dir
+    } do
+      {:ok, pid} =
+        Watcher.start_link(
+          dirs: [watch_dir],
+          data_dir: data_dir,
+          debounce_seconds: 0,
+          plaintext_paths: true
+        )
+
+      Process.sleep(100)
+
+      file_path = Path.join(watch_dir, "my_file.ex")
+      File.write!(file_path, "content")
+
+      Process.sleep(200)
+
+      date = Date.to_string(Date.utc_today())
+      events = Storage.load_events(date, data_dir)
+
+      assert events != []
+      event = List.first(events)
+
+      # Path should be the actual file path, not a hash
+      assert event.path_id == file_path
 
       GenServer.stop(pid)
     end

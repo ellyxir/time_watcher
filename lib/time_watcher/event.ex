@@ -5,13 +5,13 @@ defmodule TimeWatcher.Event do
 
   @valid_types [:created, :modified, :deleted]
 
-  @enforce_keys [:timestamp, :repo, :hashed_path, :event_type]
-  defstruct [:timestamp, :repo, :hashed_path, :event_type, :decoded_path]
+  @enforce_keys [:timestamp, :repo, :path_id, :event_type]
+  defstruct [:timestamp, :repo, :path_id, :event_type, :decoded_path]
 
   @type t :: %__MODULE__{
           timestamp: integer(),
           repo: String.t(),
-          hashed_path: String.t(),
+          path_id: String.t(),
           event_type: :created | :modified | :deleted,
           decoded_path: String.t() | nil
         }
@@ -21,7 +21,7 @@ defmodule TimeWatcher.Event do
     %__MODULE__{
       timestamp: System.system_time(:second),
       repo: repo,
-      hashed_path: hash_path(path),
+      path_id: hash_path(path),
       event_type: event_type
     }
   end
@@ -31,7 +31,7 @@ defmodule TimeWatcher.Event do
     %{
       timestamp: event.timestamp,
       repo: event.repo,
-      hashed_path: event.hashed_path,
+      path_id: event.path_id,
       event_type: Atom.to_string(event.event_type)
     }
     |> Jason.encode!()
@@ -45,7 +45,7 @@ defmodule TimeWatcher.Event do
        %__MODULE__{
          timestamp: map["timestamp"],
          repo: map["repo"],
-         hashed_path: map["hashed_path"],
+         path_id: map["path_id"] || map["hashed_path"],
          event_type: event_type
        }}
     end
