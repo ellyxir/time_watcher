@@ -347,7 +347,7 @@ defmodule TimeWatcher.CLI do
         :ok
 
       {:error, :already_running} ->
-        # Daemon already running - add the directories to it
+        IO.puts("Daemon is already running.")
         add_directories(dirs)
 
       {:error, reason} ->
