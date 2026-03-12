@@ -113,7 +113,7 @@ defmodule TimeWatcher.NodeIntegrationTest do
       test_node = :"tw_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      {:ok, _pid} = Elixir.Node.start(test_node, :shortnames)
+      {:ok, _pid} = Elixir.Node.start(test_node, name_domain: :shortnames)
       Elixir.Node.set_cookie(cookie)
 
       assert Elixir.Node.alive?()
@@ -130,7 +130,7 @@ defmodule TimeWatcher.NodeIntegrationTest do
       # Test that cookie is consistently available and can be set
       assert is_atom(cookie)
 
-      {:ok, _} = Elixir.Node.start(node1, :shortnames)
+      {:ok, _} = Elixir.Node.start(node1, name_domain: :shortnames)
       Elixir.Node.set_cookie(cookie)
       assert Elixir.Node.get_cookie() == cookie
       Elixir.Node.stop()
@@ -144,7 +144,7 @@ defmodule TimeWatcher.NodeIntegrationTest do
       test_node = :"tw_ping_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      {:ok, _} = Elixir.Node.start(test_node, :shortnames)
+      {:ok, _} = Elixir.Node.start(test_node, name_domain: :shortnames)
       Elixir.Node.set_cookie(cookie)
 
       # Non-existent node should return :pang
@@ -169,7 +169,7 @@ defmodule TimeWatcher.NodeIntegrationTest do
       test_node = :"tw_epmd_test_#{System.unique_integer([:positive])}@localhost"
       cookie = Node.ensure_cookie()
 
-      {:ok, _} = Elixir.Node.start(test_node, :shortnames)
+      {:ok, _} = Elixir.Node.start(test_node, name_domain: :shortnames)
       Elixir.Node.set_cookie(cookie)
 
       # Give epmd time to register

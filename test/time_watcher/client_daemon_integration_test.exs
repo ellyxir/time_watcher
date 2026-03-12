@@ -125,7 +125,7 @@ defmodule TimeWatcher.ClientDaemonIntegrationTest do
       daemon_node = :"tw_test_daemon_#{test_id}@localhost"
       cookie = Node.ensure_cookie()
 
-      {:ok, _} = Elixir.Node.start(daemon_node, :shortnames)
+      {:ok, _} = Elixir.Node.start(daemon_node, name_domain: :shortnames)
       Elixir.Node.set_cookie(cookie)
 
       # Start watcher on this node (simulating daemon)
